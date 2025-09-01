@@ -1,70 +1,320 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sorteio Oficial</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <header>
-    <h1>🎉 Participe do Sorteio Oficial 🎉</h1>
-  </header>
+// App.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import QRCode from "react-qr-code";
+import { createClient } from "@supabase/supabase-js";
 
-  <main>
-    <section class="cta">
-      <p>Quanto mais amigos você indicar e mais apostas eles fizerem, maiores são suas chances de ganhar! 💰🎉</p>
-      <form id="participarForm">
-        <input type="text" id="nome" placeholder="Seu nome" required>
-        <input type="email" id="email" placeholder="Seu e-mail" required>
-        <button type="submit">Participar</button>
-      </form>
-    </section>
+/*
+  CONFIG — Substitua estes valores com os seus:
+  - SUPABASE_URL: já informado por você
+  - SUPABASE_ANON_KEY: cole a anon public key do painel Supabase (segura para frontend)
+  - FUNCTION_URL_BASE: exemplo: https://<project>.functions.supabase.co  (ou seu backend)
+*/
+const SUPABASE_URL = "https://rfvkadlbnztnbfwabhzj.supabase.co";
+const SUPABASE_ANON_KEY = "REPLACE_WITH_YOUR_ANON_KEY";
+const FUNCTION_URL_BASE = "https://REPLACE_WITH_YOUR_FUNCTIONS_ENDPOINT";
 
-    <section class="links-seguranca">
-      <h2>🔒 Segurança</h2>
-      <p>
-        <a href="https://www.caixa.gov.br" target="_blank">Caixa Econômica Federal</a> |
-        <a href="https://gov.br" target="_blank">Segurança Oficial</a>
-      </p>
-    </section>
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    <section class="regras">
-      <h2>📜 Regras do Sorteio</h2>
-      <ul>
-        <li>1. Cada amigo indicado gera um número da sorte.</li>
-        <li>2. Apenas apostas válidas são contabilizadas.</li>
-        <li>3. O sorteio será auditado pela Caixa Econômica Federal.</li>
-        <li>4. A participação é gratuita.</li>
-      </ul>
-    </section>
-  </main>
+// ================================
+// UTIL & MOCK DATA (FICCIONAL)
+// ================================
+const nomesBR = [
+  "João da Silva, São Paulo",
+  "Maria Oliveira, Rio de Janeiro",
+  "Carlos Souza, Belo Horizonte",
+  "Fernanda Lima, Recife",
+  "André Santos, Curitiba",
+  "Patrícia Almeida, Salvador",
+  "Ricardo Gomes, Porto Alegre",
+  "Luciana Rocha, Brasília",
+  "Bruno Carvalho, Fortaleza",
+  "Paula Fernandes, Manaus",
+  "Rafaela Martins, Campinas",
+  "Diego Alves, Goiânia",
+  "Camila Teixeira, Natal",
+  "Marcos Vinícius, Santos",
+  "Bianca Castro, Florianópolis",
+];
 
-  <footer>
-    <p>© 2025 - Sorteio Oficial | Confiável e Transparente</p>
-  </footer>
+// Nomes masculinos e femininos simples para mapping de gênero
+const maleNames = ["João","Carlos","André","Ricardo","Bruno","Diego","Marcos","José","Paulo","Rodrigo"];
+const femaleNames = ["Maria","Fernanda","Patrícia","Luciana","Paula","Rafaela","Camila","Bianca","Juliana","Ana"];
 
-  <script>
-    const SUPABASE_URL = "COLE_AQUI_SUA_URL_SUPABASE";
-    const SUPABASE_ANON_KEY = "COLE_AQUI_SUA_ANON_KEY";
+// Depoimentos (seed)
+const depoimentosSeed = [
+  { nome: "José, Curitiba", texto: "Com esse prêmio, comprei minha casa própria. Foi surreal ver meu nome nas mensagens!" },
+  { nome: "Fernanda, Recife", texto: "Minha vida mudou para sempre. Agora sou milionária (no mundo da ficção)!" },
+  { nome: "Maria, São Paulo", texto: "Realizei meus sonhos com essa sorte imaginária. Uma experiência divertida!" },
+  { nome: "Igor, Belo Horizonte", texto: "Eu não acreditava até ver meu código Pix aparecer. Arte que brinca com expectativas." },
+];
 
-    // Exemplo de envio ao backend (que vai estar em Node)
-    const BACKEND_URL = "https://seu-backend.com"; // Exemplo: vercel app url
+// preços definidos pelo usuário (7–10 números)
+const precosPorQuantidade = { 7: 39.9, 8: 56.0, 9: 63.0, 10: 70.0 };
 
-    document.getElementById("participarForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const nome = document.getElementById("nome").value;
-      const email = document.getElementById("email").value;
+// storage keys
+const LS_REFERENCIA_USUARIO = "sf_user_ref";
+const LS_TOTAL_APOSTAS = "sf_total_apostas";
+const LS_TOTAL_ARRECADADO = "sf_total_arrecadado";
 
-      const res = await fetch(`${BACKEND_URL}/participar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, email })
-      });
+function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function randomUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0; const v = c === "x" ? r : (r & 0x3) | 0x8; return v.toString(16);
+  });
+}
+function formatBRL(v) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 
-      const data = await res.json();
-      alert(data.message || "Cadastro realizado com sucesso!");
-    });
-  </script>
-</body>
-</html>
+// fetch avatar from randomuser ensuring adult and matching gender guess
+async function fetchAdultAvatar(gender = "male") {
+  try {
+    const res = await fetch(`https://randomuser.me/api/?gender=${gender}&nat=BR&results=1`);
+    const j = await res.json();
+    const u = j.results[0];
+    if (u && u.dob && u.dob.age >= 18) return u.picture.medium;
+  } catch (e) { /* ignore */ }
+  // fallback pravatar
+  return `https://i.pravatar.cc/300?img=${Math.floor(Math.random()*70)+1}`;
+}
+
+// ================================
+// APP
+// ================================
+export default function App() {
+  const [view, setView] = useState("home"); // "home" | "indicacoes"
+
+  // aposta state
+  const [qtdNumeros, setQtdNumeros] = useState(7);
+  const [selecionados, setSelecionados] = useState([]);
+  const [qtdApostas, setQtdApostas] = useState(1);
+
+  // totals & prize (fetched)
+  const [totalApostas, setTotalApostas] = useState(() => Number(localStorage.getItem(LS_TOTAL_APOSTAS) || 0));
+  const [totalArrecadado, setTotalArrecadado] = useState(() => Number(localStorage.getItem(LS_TOTAL_ARRECADADO) || 0));
+  // Premio percentual is server-side — we won't expose a selector. Keep local fallback 30.
+  const [premioPercentualLocal, setPremioPercentualLocal] = useState(30);
+
+  // dynamic messages
+  const [mensagem, setMensagem] = useState("");
+  const [mensagemFoto, setMensagemFoto] = useState("");
+
+  // pix
+  const [pixPayload, setPixPayload] = useState("");
+  const [pixTxid, setPixTxid] = useState("");
+
+  // ref code
+  const [refAtual, setRefAtual] = useState(() => {
+    const saved = localStorage.getItem(LS_REFERENCIA_USUARIO);
+    if (saved) return JSON.parse(saved);
+    const novo = { id: randomUUID(), codigo: `REF-${Math.random().toString(36).slice(2,8).toUpperCase()}` };
+    localStorage.setItem(LS_REFERENCIA_USUARIO, JSON.stringify(novo));
+    return novo;
+  });
+
+  // liberar indicações (após aposta >=9)
+  const [liberouIndicacoes, setLiberouIndicacoes] = useState(false);
+
+  // depoimentos com avatar (gender-matching)
+  const depoimentos = useMemo(() => depoimentosSeed, []);
+  const [depoimentosComFoto, setDepoimentosComFoto] = useState([]);
+
+  // prize display (fetched)
+  const [premioValor, setPremioValor] = useState(0);
+
+  // cronômetro
+  const [timeLeft, setTimeLeft] = useState("");
+
+  // helpers derived
+  const precoUnitario = precosPorQuantidade[qtdNumeros] || 0;
+  const totalCompra = precoUnitario * qtdApostas;
+  const podeConfirmar = selecionados.length === qtdNumeros && qtdApostas >= 1 && qtdApostas <= 1000 && precoUnitario > 0;
+
+  // --- effects: dynamic message ticker & avatars & cronômetro ---
+  useEffect(() => {
+    // initially fetch random avatar for messages ensuring adult and matching gender of name
+    let mounted = true;
+    const tick = async () => {
+      const nomeRaw = getRandomItem(nomesBR);
+      const first = nomeRaw.split(" ")[0];
+      const guessGender = maleNames.includes(first) ? "male" : femaleNames.includes(first) ? "female" : (Math.random() > 0.5 ? "male":"female");
+      const avatar = await fetchAdultAvatar(guessGender);
+      if (!mounted) return;
+      setMensagem(`${nomeRaw} acabou de ganhar R$ 500.000! (ficção)`);
+      setMensagemFoto(avatar);
+    };
+    tick();
+    const id = setInterval(tick, 3000);
+    return () => { mounted = false; clearInterval(id); };
+  }, []);
+
+  useEffect(() => {
+    // preload depoimento avatars with gender guess
+    (async () => {
+      const mapped = await Promise.all(depoimentos.map(async (d) => {
+        const first = d.nome.split(" ")[0];
+        const guessGender = maleNames.includes(first) ? "male" : femaleNames.includes(first) ? "female" : (Math.random()>0.5 ? "male":"female");
+        const avatar = await fetchAdultAvatar(guessGender);
+        return { ...d, avatar };
+      }));
+      setDepoimentosComFoto(mapped);
+    })();
+  }, [depoimentos]);
+
+  useEffect(() => {
+    // countdown to last day of month 23:59:59
+    const update = () => {
+      const now = new Date();
+      const last = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59);
+      const diff = last - now;
+      if (diff <= 0) { setTimeLeft("Sorteio em andamento"); return; }
+      const d = Math.floor(diff / (1000*60*60*24));
+      const h = Math.floor((diff/(1000*60*60))%24);
+      const m = Math.floor((diff/(1000*60))%60);
+      const s = Math.floor((diff/1000)%60);
+      setTimeLeft(`${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return ()=>clearInterval(id);
+  }, []);
+
+  // persist totals
+  useEffect(() => { localStorage.setItem(LS_TOTAL_APOSTAS, String(totalApostas)); }, [totalApostas]);
+  useEffect(() => { localStorage.setItem(LS_TOTAL_ARRECADADO, String(totalArrecadado)); }, [totalArrecadado]);
+
+  // ========== functions ==========
+
+  // toggle number in grid
+  const toggleNumero = (n) => {
+    if (selecionados.includes(n)) setSelecionados(selecionados.filter(x=>x!==n));
+    else if (selecionados.length < qtdNumeros) setSelecionados([...selecionados, n]);
+  };
+
+  // Ensures local user (simple record in users table if not exists) and returns id/ref_code
+  async function ensureUser() {
+    const saved = JSON.parse(localStorage.getItem(LS_REFERENCIA_USUARIO) || "null");
+    if (saved && saved.id) {
+      // try to fetch associated user row by ref_code
+      try {
+        const { data } = await supabase.from("users").select("id,ref_code").eq("ref_code", saved.codigo).limit(1).single();
+        if (data) {
+          // store user id in local storage for later
+          localStorage.setItem("mega7_user_id", data.id);
+          return { id: data.id, code: data.ref_code };
+        }
+      } catch(e){ /* ignore */ }
+    }
+    // create new user minimal
+    const display = `User-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
+    const insert = { full_name: display, ref_code: (randomUUID().slice(0,6).toUpperCase()) };
+    // attempt to insert and return id
+    const { data, error } = await supabase.from("users").insert([insert]).select().single();
+    if (error) {
+      console.error("ensureUser error", error);
+      // fallback create local-only id
+      return { id: randomUUID(), code: insert.ref_code };
+    }
+    // save local ref
+    const localRef = { id: data.id, codigo: data.ref_code };
+    localStorage.setItem(LS_REFERENCIA_USUARIO, JSON.stringify(localRef));
+    return { id: data.id, code: data.ref_code };
+  }
+
+  // call serverless function to register a bet (server handles aggregates & referrals)
+  async function postBetToFunction(payload) {
+    const url = `${FUNCTION_URL_BASE}/aposta`;
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(payload) });
+    return res.json();
+  }
+
+  const confirmarAposta = async () => {
+    if (!podeConfirmar) return;
+    // ensure user
+    const user = await ensureUser();
+    // build payload for function
+    const payload = {
+      user_id: user.id,
+      numeros: selecionados,
+      quantity_numbers: qtdNumeros,
+      qty_tickets: qtdApostas,
+      unit_price: precoUnitario,
+      client_ip: null,
+      user_agent: navigator.userAgent,
+      ref_code: user.code // user's own ref code stored on users.ref_code
+    };
+
+    // optimistic local totals
+    setTotalApostas(t=>t + qtdApostas);
+    setTotalArrecadado(v=>v + totalCompra);
+
+    // call function (server-side will insert bet and update aggregates)
+    try {
+      const result = await postBetToFunction(payload);
+      if (result?.error) {
+        console.error("postBet error", result.error);
+        alert("Erro ao registrar aposta: " + (result.error?.message || JSON.stringify(result.error)));
+        return;
+      }
+      // function should return pix_payload & txid
+      setPixPayload(result.pix_payload || `PIX-FICTICIO|VLR:${totalCompra.toFixed(2)}`);
+      setPixTxid(result.txid || randomUUID().slice(0,25));
+      // reset selection
+      setSelecionados([]);
+      // liberate referrals if qtyNumbers >=9
+      if (qtdNumeros >= 9) setLiberouIndicacoes(true);
+      // refresh prize via server
+      fetchPrize();
+      // refresh ranking (optional)
+    } catch (err) {
+      console.error(err);
+      alert("Erro de rede ao confirmar aposta.");
+    }
+  };
+
+  async function fetchPrize() {
+    try {
+      const month = new Date().toISOString().slice(0,7);
+      const res = await fetch(`${FUNCTION_URL_BASE}/get_prize?month=${month}`);
+      const json = await res.json();
+      if (json.premio_valor != null) setPremioValor(Number(json.premio_valor));
+      else {
+        // fallback local calc
+        setPremioValor((totalArrecadado * premioPercentualLocal)/100);
+      }
+    } catch (e) {
+      setPremioValor((totalArrecadado * premioPercentualLocal)/100);
+    }
+  }
+
+  // register a referral: calls register_referral function with ref code & referred email
+  async function registerReferral(refCode, referredEmail) {
+    const url = `${FUNCTION_URL_BASE}/register_referral`;
+    const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ ref_code: refCode, referred_email: referredEmail })});
+    const json = await res.json();
+    return json;
+  }
+
+  // load ranking from function
+  const [ranking, setRanking] = useState([]);
+  async function loadRanking() {
+    try {
+      const res = await fetch(`${FUNCTION_URL_BASE}/ranking`);
+      const json = await res.json();
+      setRanking(json.ranking || []);
+    } catch (e) {
+      // fallback to local storage ranking (demo)
+      const raw = JSON.parse(localStorage.getItem("sf_indices") || "{}");
+      const arr = Object.entries(raw).map(([code,count])=>({ code, count })).sort((a,b)=>b.count-a.count).slice(0,10);
+      setRanking(arr);
+    }
+  }
+
+  // initial load
+  useEffect(()=>{ fetchPrize(); loadRanking(); }, []);
+
+  // ========== UI ==========
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-yellow-300 text-gray-900 p-4">
+      <header className="max-w-5xl mx-auto flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-extrabold">Mega7</h1>
+          <p classNa

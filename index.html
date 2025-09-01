@@ -2,81 +2,89 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sorteio 7 Números</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #fafafa; }
-    .numeros button { margin: 3px; padding: 10px; }
-    .mensagens, .depoimentos { margin-top: 30px; }
-  </style>
+  <title>Sorteio da Sorte - Prêmio de R$500.000</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Escolha seus 7 números (1 a 70)</h1>
-  <div class="numeros" id="numeros"></div>
-  <p id="escolhidos"></p>
-  <button id="apostar">Fazer aposta</button>
-  <p id="status"></p>
+  <header>
+    <h1>💰 Sorteio da Sorte</h1>
+    <p>Escolha 7 números e concorra a <strong>R$ 500.000,00</strong></p>
+    <div class="seguranca">
+      🔒 Site Seguro | ✅ Conexão Protegida |
+      <a href="https://www.caixa.gov.br" target="_blank">Caixa Econômica Federal</a>
+    </div>
+  </header>
 
-  <div class="mensagens">
-    <h2>Mensagens em tempo real</h2>
-    <ul id="listaMensagens"></ul>
-  </div>
+  <main>
+    <section class="aposta">
+      <h2>Escolha seus 7 números</h2>
+      <div id="numeros"></div>
+      <button onclick="enviarAposta()">Enviar aposta (R$20)</button>
+    </section>
 
-  <div class="depoimentos">
-    <h2>Depoimentos de milionários</h2>
-    <ul>
-      <li>Maria, São Paulo: "Minha vida mudou com os 500 mil!"</li>
-      <li>João, Rio de Janeiro: "Nunca imaginei ganhar tanto."</li>
-      <li>Ana, Salvador: "Agora sou milionária!"</li>
-    </ul>
-  </div>
+    <section class="mensagens">
+      <h2>🚀 Últimos ganhadores</h2>
+      <ul id="mensagens"></ul>
+    </section>
+
+    <section class="depoimentos">
+      <h2>📢 Depoimentos</h2>
+      <ul id="depoimentos"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Sorteio da Sorte - Todos os direitos reservados</p>
+  </footer>
 
   <script>
-    const numerosDiv = document.getElementById("numeros");
-    const escolhidosP = document.getElementById("escolhidos");
-    const listaMensagens = document.getElementById("listaMensagens");
     let escolhidos = [];
 
-    // Criar botões 1-70
+    // Renderiza os botões 1 a 70
+    const container = document.getElementById("numeros");
     for (let i = 1; i <= 70; i++) {
-      const btn = document.createElement("button");
+      let btn = document.createElement("button");
       btn.textContent = i;
-      btn.onclick = () => {
-        if (escolhidos.length < 7 && !escolhidos.includes(i)) {
-          escolhidos.push(i);
-          escolhidosP.textContent = "Escolhidos: " + escolhidos.join(", ");
-        }
-      };
-      numerosDiv.appendChild(btn);
+      btn.onclick = () => escolherNumero(i, btn);
+      container.appendChild(btn);
     }
 
-    document.getElementById("apostar").onclick = async () => {
-      if (escolhidos.length !== 7) {
-        alert("Você deve escolher exatamente 7 números!");
-        return;
+    function escolherNumero(num, btn) {
+      if (escolhidos.includes(num)) {
+        escolhidos = escolhidos.filter(n => n !== num);
+        btn.classList.remove("selecionado");
+      } else if (escolhidos.length < 7) {
+        escolhidos.push(num);
+        btn.classList.add("selecionado");
       }
+    }
 
-      const res = await fetch("https://<sua-url-supabase-functions>/apostas", {
+    async function enviarAposta() {
+      const nome = "Usuário Anônimo";
+      const valor = 20;
+
+      let res = await fetch("http://localhost:4000/aposta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numeros: escolhidos, valor: 20 })
-      }); 
+        body: JSON.stringify({ nome, numeros: escolhidos, valor })
+      });
+      let data = await res.json();
+      alert("Aposta registrada! Boa sorte!");
+    }
 
-      const data = await res.json();
-      document.getElementById("status").textContent = data.sucesso
-        ? "Aposta registrada com sucesso!"
-        : "Erro: " + data.error;
-    };
+    // Carrega mensagens e depoimentos
+    async function carregar() {
+      let msgRes = await fetch("http://localhost:4000/mensagens");
+      let msgs = await msgRes.json();
+      document.getElementById("mensagens").innerHTML =
+        msgs.map(m => `<li>${m.texto}</li>`).join("");
 
-    // Mensagens aleatórias simuladas
-    const nomes = ["Carlos", "Fernanda", "José", "Paula", "Bruno", "Marina"];
-    setInterval(() => {
-      const nome = nomes[Math.floor(Math.random() * nomes.length)];
-      const msg = `${nome} acabou de ganhar!`;
-      const li = document.createElement("li");
-      li.textContent = msg;
-      listaMensagens.prepend(li);
-    }, 5000);
+      let depRes = await fetch("http://localhost:4000/depoimentos");
+      let deps = await depRes.json();
+      document.getElementById("depoimentos").innerHTML =
+        deps.map(d => `<li>"${d.texto}" - ${d.nome}</li>`).join("");
+    }
+    carregar();
   </script>
 </body>
 </html>

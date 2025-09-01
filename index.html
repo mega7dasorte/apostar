@@ -317,4 +317,210 @@ export default function App() {
       <header className="max-w-5xl mx-auto flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-extrabold">Mega7</h1>
-          <p classNa
+          <p className="text-sm text-gray-700">Escolha. Indique. Concorra a R$ 500.000 — Projeto fictício</p>
+        </div>
+        <nav className="flex gap-3 items-center">
+          <button className={`px-3 py-2 rounded-xl ${view==="home" ? "bg-white":"bg-white/60"}`} onClick={()=>setView("home")}>Página Inicial</button>
+          <button className={`px-3 py-2 rounded-xl ${view==="indicacoes" ? "bg-white":"bg-white/60"}`} onClick={()=>setView("indicacoes")} disabled={!liberouIndicacoes} title={!liberouIndicacoes ? "Liberado após aposta com 9+ números" : "Indicar amigos"}>Indicações</button>
+        </nav>
+      </header>
+
+      {view === "home" ? (
+        <main className="max-w-5xl mx-auto">
+          {/* HERO */}
+          <section className="mb-6 p-6 bg-white rounded-2xl shadow flex flex-col md:flex-row gap-6">
+            <div className="flex-1">
+              <h2 className="text-3xl font-bold text-red-700">Concorra a <span className="text-4xl">R$ 500.000</span></h2>
+              <p className="mt-2 text-sm text-gray-600">Quanto mais indicar e mais apostas as suas indicações fizerem, maiores suas chances. Promoção fictícia.</p>
+              <div className="mt-4 flex gap-4 items-center">
+                <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-orange-400 text-white font-bold" onClick={()=>document.getElementById('gridNumbers')?.scrollIntoView({behavior:'smooth'})}>Jogar Agora</button>
+                <div className="text-sm text-gray-500">Prêmio estimado: <strong>{formatBRL(premioValor)}</strong></div>
+              </div>
+              <div className="mt-3 text-xs text-gray-500">Sorteio: último dia do mês • Tempo restante: <strong>{timeLeft}</strong></div>
+            </div>
+            <div className="w-72">
+              <div className="p-3 bg-gray-50 rounded-lg shadow flex items-center gap-3">
+                <img src={mensagemFoto} alt="avatar" className="w-12 h-12 rounded-full object-cover" />
+                <div>
+                  <div className="text-xs text-red-600 font-semibold">Última vitória (ficção)</div>
+                  <div className="text-sm">{mensagem}</div>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {depoimentosComFoto.slice(0,3).map((d,i)=>(
+                  <div key={i} className="bg-white p-3 rounded-lg shadow flex gap-3 items-center">
+                    <img src={d.avatar} alt={d.nome} className="w-10 h-10 rounded-full object-cover" />
+                    <div className="text-sm">
+                      <div className="font-semibold">{d.nome}</div>
+                      <div className="text-xs text-gray-600">{d.texto}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Totals */}
+          <section className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white p-4 rounded-xl shadow text-center">
+              <div className="text-sm text-gray-600">Participações registradas</div>
+              <div className="text-2xl font-bold">{totalApostas.toLocaleString('pt-BR')}</div>
+            </div>
+            <div className="bg-white p-4 rounded-xl shadow text-center">
+              <div className="text-sm text-gray-600">Total arrecadado (fictício)</div>
+              <div className="text-2xl font-bold">{formatBRL(totalArrecadado)}</div>
+            </div>
+            <div className="bg-white p-4 rounded-xl shadow text-center">
+              <div className="text-sm text-gray-600">Prêmio do mês</div>
+              <div className="text-2xl font-bold">{formatBRL(premioValor)}</div>
+            </div>
+          </section>
+
+          {/* Aposta */}
+          <section id="betPanel" className="bg-white p-6 rounded-2xl shadow mb-8">
+            <h3 className="text-xl font-bold mb-4">Monte sua aposta</h3>
+
+            <div className="grid md:grid-cols-3 gap-4 items-end">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Quantidade de números</label>
+                <select value={qtdNumeros} onChange={(e)=>{ setQtdNumeros(Number(e.target.value)); setSelecionados([]); }} className="w-full border rounded-xl p-2">
+                  <option value={7}>7 números — {formatBRL(precosPorQuantidade[7])}</option>
+                  <option value={8}>8 números — {formatBRL(precosPorQuantidade[8])}</option>
+                  <option value={9}>9 números — {formatBRL(precosPorQuantidade[9])}</option>
+                  <option value={10}>10 números — {formatBRL(precosPorQuantidade[10])}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">Quantidade de apostas</label>
+                <input type="number" min={1} max={1000} value={qtdApostas} onChange={(e)=>setQtdApostas(Math.min(1000, Math.max(1, Number(e.target.value)||1)))} className="w-full border rounded-xl p-2" />
+                <div className="text-xs text-gray-500 mt-1">Máx. 1000 apostas</div>
+              </div>
+
+              <div className="text-right">
+                <div className="text-sm text-gray-600">Total desta compra</div>
+                <div className="text-2xl font-bold">{formatBRL(totalCompra)}</div>
+              </div>
+            </div>
+
+            {/* Grid numbers */}
+            <div id="gridNumbers" className="mt-6 grid grid-cols-10 gap-2">
+              {Array.from({ length: 70 }, (_,i)=>i+1).map(n=>(
+                <button key={n} onClick={()=>toggleNumero(n)} className={`w-10 h-10 rounded-full ${selecionados.includes(n) ? "bg-red-600 text-white":"bg-gray-100 hover:bg-gray-200"}`}>
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3 text-sm text-gray-700">Selecionados ({selecionados.length}/{qtdNumeros}): {selecionados.join(", ") || "nenhum"}</div>
+
+            <div className="mt-4 flex items-center justify-between gap-4">
+              <div className="flex gap-3">
+                <button disabled={!podeConfirmar} onClick={confirmarAposta} className={`px-4 py-2 rounded-xl font-bold ${podeConfirmar ? "bg-green-600 text-white":"bg-gray-300 text-gray-600"}`}>Confirmar Aposta (fictícia)</button>
+                <button onClick={()=>{ setSelecionados([]); }} className="px-4 py-2 rounded-xl border">Limpar</button>
+              </div>
+
+              <div className="text-xs text-gray-500">Atenção: este site é fictício. Não processa pagamentos reais.</div>
+            </div>
+
+            {/* PIX fictício */}
+            {pixPayload && (
+              <div className="mt-6 grid md:grid-cols-2 gap-6 items-center">
+                <div className="bg-gray-50 p-4 rounded-xl">
+                  <h4 className="font-bold mb-2">PIX (fictício) — Copia e Cola</h4>
+                  <pre className="text-xs break-words bg-white p-2 rounded">{pixPayload}</pre>
+                  <div className="text-xs mt-2">Banco: pagBank (fictício) • Chave: c8875076-656d-4a18-8094-c70c67dbb56c • TXID: {pixTxid}</div>
+                </div>
+                <div className="bg-white p-4 rounded-xl flex items-center justify-center">
+                  <QRCode value={pixPayload} size={196} />
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Footer rules */}
+          <section className="bg-white p-4 rounded-xl text-sm text-gray-700 mb-12">
+            <h4 className="font-bold mb-2">Regras de Participação</h4>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Site fictício / artístico. Não constitui jogo de azar real.</li>
+              <li>Fotos usadas em mensagens e depoimentos são de pessoas maiores de 18 anos (fictícias).</li>
+              <li>Indicações só contam se o indicado tiver pelo menos 1 aposta com status <strong>confirmed</strong> no mês vigente.</li>
+              <li>Vencedor mensal: quem tiver mais indicações válidas (desempate por soma de valores confirmados).</li>
+              <li>O pagamento do prêmio é realizado manualmente após verificação KYC (nome completo, CPF e chave PIX).</li>
+              <li>Disponível mundialmente; obedeça às leis locais.</li>
+            </ul>
+            <div className="mt-3 text-xs">
+              Links: <a className="text-blue-600 underline" href="/termos.html">Termos</a> • <a className="text-blue-600 underline" href="/privacidade.html">Privacidade</a> • <a className="text-blue-600 underline" href="https://www.caixa.gov.br" target="_blank" rel="noreferrer">Caixa Econômica Federal</a>
+            </div>
+          </section>
+        </main>
+      ) : (
+        <IndicacoesView refAtual={refAtual} liberado={liberouIndicacoes} registerReferral={registerReferral} ranking={ranking} />
+      )}
+
+      <footer className="max-w-5xl mx-auto text-center text-xs text-gray-600">
+        © {new Date().getFullYear()} Mega7 — Projeto fictício. Dados e operações ilustrativos.
+      </footer>
+    </div>
+  );
+}
+
+// ========== Indications View ==========
+function IndicacoesView({ refAtual, liberado, registerReferral, ranking }) {
+  const [novoEmail, setNovoEmail] = useState("");
+  const linkCompartilhar = `${window.location.origin}?ref=${refAtual.codigo}`;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!novoEmail.includes("@")) return alert("Email inválido (simulado).");
+    // call server function to register referral
+    const res = await fetch(`${FUNCTION_URL_BASE}/register_referral`, {
+      method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ ref_code: refAtual.codigo, referred_email: novoEmail })
+    });
+    const j = await res.json();
+    if (j.success) { alert("Indicação registrada."); setNovoEmail(""); }
+    else alert("Erro ao registrar indicação.");
+  };
+
+  return (
+    <main className="max-w-4xl mx-auto">
+      <section className="text-center mb-6">
+        <h2 className="text-3xl font-black text-red-700">Convide seus amigos</h2>
+        <p className="mt-2">Quanto mais amigos você indicar e mais apostas eles fizerem, maiores são suas chances de ganhar! 💰🎉</p>
+      </section>
+
+      <section className="bg-white p-6 rounded-xl mb-6">
+        <h3 className="font-bold">Seu código</h3>
+        <div className="flex gap-3 items-center mt-2">
+          <div className="bg-gray-100 font-mono px-3 py-2 rounded">{refAtual.codigo}</div>
+          <button onClick={()=>navigator.clipboard.writeText(refAtual.codigo)} className="px-3 py-2 bg-gray-900 text-white rounded">Copiar</button>
+        </div>
+
+        <h4 className="mt-4">Link</h4>
+        <div className="flex gap-3 items-center mt-2">
+          <div className="bg-gray-100 px-3 py-2 rounded break-all">{linkCompartilhar}</div>
+          <button onClick={()=>navigator.clipboard.writeText(linkCompartilhar)} className="px-3 py-2 bg-gray-900 text-white rounded">Copiar link</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-4">
+          <label className="block mb-2">Registrar indicação (simulado)</label>
+          <div className="flex gap-2">
+            <input className="flex-1 p-2 border rounded" placeholder="email do amigo" value={novoEmail} onChange={(e)=>setNovoEmail(e.target.value)} />
+            <button className="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Indicações só são contabilizadas quando o indicado fizer uma aposta confirmada.</p>
+        </form>
+      </section>
+
+      <section className="bg-white p-6 rounded-xl">
+        <h3 className="font-bold mb-3">Ranking (top 10)</h3>
+        <ol className="list-decimal pl-6">
+          {ranking && ranking.length ? ranking.map((r,i)=>( <li key={i} className="py-1">{r.code} — {r.count} indicações válidas</li> )) : <li>Sem indicações ainda</li>}
+        </ol>
+      </section>
+
+      <footer className="text-center text-xs text-gray-500 mt-6">As indicações são registradas no banco central para apuração no fim do mês.</footer>
+    </main>
+  );
+}

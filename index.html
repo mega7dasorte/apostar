@@ -1,107 +1,477 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sorteio Fictício</title>
-<style>
-  body { font-family: sans-serif; background: #fff3c4; color: #333; margin: 0; padding: 0; }
-  header { padding: 1rem; background: #facc15; display: flex; justify-content: space-between; align-items: center; }
-  h1 { margin: 0; }
-  button { cursor: pointer; }
-  .grid { display: grid; gap: 5px; margin-top: 1rem; }
-  .grid-cols-10 { grid-template-columns: repeat(10, 1fr); }
-  .numero { width: 35px; height: 35px; border-radius: 50%; border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
-  .selecionado { background: #dc2626; color: white; }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-</head>
-<body>
-<header>
-  <h1>Sorteio Fictício</h1>
-</header>
+import { useEffect, useMemo, useState } from "react";
+import QRCode from "react-qr-code";
 
-<main style="padding:1rem; max-width:600px; margin:auto;">
-  <section>
-    <label>Quantidade de números:
-      <select id="qtdNumeros">
-        <option value="7">7</option>
-        <option value="8">8</option>
-        <option value="9">9</option>
-        <option value="10">10</option>
-      </select>
-    </label>
-    <label>Quantidade de apostas:
-      <input type="number" id="qtdApostas" value="1" min="1" max="1000">
-    </label>
-    <button id="confirmar">Confirmar Aposta</button>
-  </section>
+// ================================
+// UTIL & MOCK DATA (FICCIONAL)
+// ================================
+const nomesBR = [
+  "João da Silva, São Paulo",
+  "Maria Oliveira, Rio de Janeiro",
+  "Carlos Souza, Belo Horizonte",
+  "Fernanda Lima, Recife",
+  "André Santos, Curitiba",
+  "Patrícia Almeida, Salvador",
+  "Ricardo Gomes, Porto Alegre",
+  "Luciana Rocha, Brasília",
+  "Bruno Carvalho, Fortaleza",
+  "Paula Fernandes, Manaus",
+  "Rafaela Martins, Campinas",
+  "Diego Alves, Goiânia",
+  "Camila Teixeira, Natal",
+  "Marcos Vinícius, Santos",
+  "Bianca Castro, Florianópolis",
+];
 
-  <section class="grid grid-cols-10" id="numerosGrid"></section>
+// imagens de rostos (banco de imagens genérico/pravatar) — somente fins visuais
+const rostos = Array.from({ length: 30 }, (_, i) => `https://i.pravatar.cc/300?img=${i + 1}`);
 
-  <p>Selecionados: <span id="selecionados"></span></p>
-</main>
+// Depoimentos fictícios
+const depoimentosSeed = [
+  {
+    nome: "José, Curitiba",
+    texto:
+      "“Com esse prêmio, comprei minha casa própria. Foi surreal ver meu nome nas mensagens!”",
+  },
+  {
+    nome: "Fernanda, Recife",
+    texto: "“Minha vida mudou para sempre. Agora sou milionária (no mundo da ficção)!”",
+  },
+  {
+    nome: "Maria, São Paulo",
+    texto: "“Realizei meus sonhos com essa sorte imaginária. Uma experiência divertida!”",
+  },
+  {
+    nome: "Igor, Belo Horizonte",
+    texto: "“Eu não acreditava até ver meu código Pix aparecer. Arte que brinca com expectativas.”",
+  },
+];
 
-<script>
-  // ===================== SUPABASE =====================
-  const supabaseUrl = 'https://rfvkadlbnztnbfwabhzj.supabase.co';
-  const supabaseAnonKey = 'COLOQUE_SUA_ANON_KEY_AQUI'; // ⚠️ Substitua pela sua anon key
-  const supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
+// preços definidos pelo usuário (7–10 números)
+const precosPorQuantidade = {
+  7: 39.9, // promoção solicitada
+  8: 56.0,
+  9: 63.0,
+  10: 70.0,
+};
 
-  // ===================== LÓGICA =====================
-  const qtdNumerosEl = document.getElementById('qtdNumeros');
-  const qtdApostasEl = document.getElementById('qtdApostas');
-  const numerosGridEl = document.getElementById('numerosGrid');
-  const selecionadosEl = document.getElementById('selecionados');
-  const confirmarBtn = document.getElementById('confirmar');
+// porcentagens de prêmio possíveis (o autor decide qual usar no mês)
+const opcoesPremio = [20, 30, 40];
 
-  let selecionados = [];
+// storage keys
+const LS_TOTAL_APOSTAS = "sf_total_apostas"; // quantidade total de apostas (todas as compras)
+const LS_TOTAL_ARRECADADO = "sf_total_arrecadado"; // valor total arrecadado (fictício)
+const LS_PREMIO_ESCOLHIDO = "sf_premio_percentual"; // 20|30|40
+const LS_REFERENCIA_USUARIO = "sf_user_ref"; // dados do usuário atual (id/codigo)
+const LS_INDICACOES = "sf_indicacoes"; // mapa de codigoRef -> contagem
 
-  function renderGrid() {
-    numerosGridEl.innerHTML = '';
-    for (let i=1; i<=70; i++){
-      const btn = document.createElement('div');
-      btn.textContent = i;
-      btn.className = 'numero' + (selecionados.includes(i) ? ' selecionado' : '');
-      btn.onclick = () => toggleNumero(i);
-      numerosGridEl.appendChild(btn);
-    }
-    selecionadosEl.textContent = selecionados.join(', ');
-  }
+function getRandomItem(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
-  function toggleNumero(n) {
-    const max = parseInt(qtdNumerosEl.value);
+function randomUUID() {
+  // simples uuid v4 client-side
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function formatBRL(v) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// ================================
+// APP (SPA simples com duas "páginas"): Home e Indicações
+// ================================
+export default function App() {
+  const [view, setView] = useState("home"); // "home" | "indicacoes"
+
+  // estado principal da aposta
+  const [qtdNumeros, setQtdNumeros] = useState(7);
+  const [selecionados, setSelecionados] = useState([]); // números escolhidos
+  const [qtdApostas, setQtdApostas] = useState(1); // até 1000
+
+  // totais armazenados (fictício) — acumulam no localStorage
+  const [totalApostas, setTotalApostas] = useState(() => Number(localStorage.getItem(LS_TOTAL_APOSTAS) || 0));
+  const [totalArrecadado, setTotalArrecadado] = useState(() => Number(localStorage.getItem(LS_TOTAL_ARRECADADO) || 0));
+
+  // prêmio (20/30/40) — escolhido pelo autor (pode alterar via seletor no rodapé admin)
+  const [premioPercentual, setPremioPercentual] = useState(() => Number(localStorage.getItem(LS_PREMIO_ESCOLHIDO) || 30));
+
+  // mensagens dinâmicas
+  const [mensagem, setMensagem] = useState("");
+  const [mensagemFoto, setMensagemFoto] = useState(getRandomItem(rostos));
+
+  // PIX fictício quando confirma aposta
+  const [pixPayload, setPixPayload] = useState("");
+  const [pixTxid, setPixTxid] = useState("");
+
+  // referência/indicação do usuário atual
+  const [refAtual, setRefAtual] = useState(() => {
+    const saved = localStorage.getItem(LS_REFERENCIA_USUARIO);
+    if (saved) return JSON.parse(saved);
+    const novo = { id: randomUUID(), codigo: `REF-${Math.random().toString(36).slice(2, 8).toUpperCase()}` };
+    localStorage.setItem(LS_REFERENCIA_USUARIO, JSON.stringify(novo));
+    return novo;
+  });
+
+  // controla acesso à página de indicações (só aparece após aposta de >= 9 números)
+  const [liberouIndicacoes, setLiberouIndicacoes] = useState(false);
+
+  // depoimentos com rostos atribuídos
+  const depoimentos = useMemo(() => {
+    return depoimentosSeed.map((d, i) => ({ ...d, foto: rostos[i % rostos.length] }));
+  }, []);
+
+  // ticker de mensagens (a cada 3s)
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      setMensagem(`${getRandomItem(nomesBR)} acabou de ganhar R$ 500 mil (ficção).`);
+      setMensagemFoto(getRandomItem(rostos));
+    }, 3000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // sincroniza totais no localStorage
+  useEffect(() => {
+    localStorage.setItem(LS_TOTAL_APOSTAS, String(totalApostas));
+  }, [totalApostas]);
+  useEffect(() => {
+    localStorage.setItem(LS_TOTAL_ARRECADADO, String(totalArrecadado));
+  }, [totalArrecadado]);
+  useEffect(() => {
+    localStorage.setItem(LS_PREMIO_ESCOLHIDO, String(premioPercentual));
+  }, [premioPercentual]);
+
+  const precoUnitario = precosPorQuantidade[qtdNumeros] || null; // limitamos às opções definidas
+  const totalCompra = precoUnitario ? precoUnitario * qtdApostas : 0;
+
+  // grid 1–70
+  const toggleNumero = (n) => {
     if (selecionados.includes(n)) {
-      selecionados = selecionados.filter(x => x!==n);
-    } else if (selecionados.length < max) {
-      selecionados.push(n);
-    }
-    renderGrid();
-  }
-
-  confirmarBtn.onclick = async () => {
-    const qtdNumeros = parseInt(qtdNumerosEl.value);
-    const qtdApostas = parseInt(qtdApostasEl.value);
-    if (selecionados.length !== qtdNumeros) {
-      alert(`Escolha exatamente ${qtdNumeros} números`);
-      return;
-    }
-
-    // Envio para Supabase (tabela fictícia: apostas)
-    const { data, error } = await supabase
-      .from('apostas')
-      .insert([{ numeros: selecionados, qtdApostas, criado_em: new Date() }]);
-
-    if (error) {
-      alert('Erro ao registrar aposta: ' + error.message);
-    } else {
-      alert('Aposta registrada com sucesso (ficção)');
-      selecionados = [];
-      renderGrid();
+      setSelecionados(selecionados.filter((x) => x !== n));
+    } else if (selecionados.length < qtdNumeros) {
+      setSelecionados([...selecionados, n]);
     }
   };
 
-  renderGrid();
-</script>
-</body>
-</html>
+  const podeConfirmar = selecionados.length === qtdNumeros && precoUnitario && qtdApostas >= 1 && qtdApostas <= 1000;
+
+  const confirmarAposta = () => {
+    if (!podeConfirmar) return;
+
+    // acumula totais fictícios
+    setTotalApostas((t) => t + qtdApostas);
+    setTotalArrecadado((v) => v + totalCompra);
+
+    // libera indicações se aposta com >= 9 números
+    if (qtdNumeros >= 9) setLiberouIndicacoes(true);
+
+    // gera PIX payload fictício (NÃO REAL / NÃO USAR PARA PAGAMENTOS!)
+    const txid = randomUUID().slice(0, 25); // txid máx 25 chars
+    setPixTxid(txid);
+    // Pix Copy&Paste APENAS FICCIONAL: chave e descrição
+    const chave = "c8875076-656d-4a18-8094-c70c67dbb56c"; // chave "pagBank" fornecida (fictícia)
+    const descricao = `APOSTA-${qtdNumeros}N-${qtdApostas}X`;
+    const payload = `PIX-FICTICIO|BANK:pagBank|CHAVE:${chave}|TXID:${txid}|DESC:${descricao}|VLR:${totalCompra.toFixed(
+      2
+    )}`;
+    setPixPayload(payload);
+
+    // reseta seleção (opcional)
+    setSelecionados([]);
+  };
+
+  // cálculo de premiação fictícia
+  const premioPrevisto = (totalArrecadado * premioPercentual) / 100;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-yellow-300 text-gray-900">
+      <header className="px-6 py-4 flex items-center justify-between">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Sorteio Fictício</h1>
+        <nav className="flex items-center gap-3">
+          <button
+            className={`px-3 py-2 rounded-xl shadow ${view === "home" ? "bg-white" : "bg-white/60"}`}
+            onClick={() => setView("home")}
+          >
+            Página Inicial
+          </button>
+          <button
+            className={`px-3 py-2 rounded-xl shadow ${view === "indicacoes" ? "bg-white" : "bg-white/60"}`}
+            onClick={() => setView("indicacoes")}
+            disabled={!liberouIndicacoes}
+            title={!liberouIndicacoes ? "Liberado após uma aposta de 9 ou 10 números" : "Indicar amigos"}
+          >
+            Indicações
+          </button>
+        </nav>
+      </header>
+
+      {view === "home" ? (
+        <main className="px-6 pb-24 max-w-5xl mx-auto">
+          {/* Hero */}
+          <section className="text-center mb-6">
+            <h2 className="text-3xl md:text-4xl font-black text-red-700">Escolha seus números e participe (ficção)</h2>
+            <p className="mt-2">Prêmio ilustrativo de <span className="font-bold">R$ 500.000</span>. Sem transações reais.</p>
+            <p className="text-xs mt-1">Este site é uma obra artística/experimental. Nada aqui é um produto financeiro ou aposta real.</p>
+          </section>
+
+          {/* Mensagens Dinâmicas */}
+          <section className="mb-8">
+            <div className="bg-white rounded-2xl shadow p-4 flex items-center gap-3">
+              <img src={mensagemFoto} alt="Rosto" className="w-12 h-12 rounded-full object-cover" />
+              <p className="text-sm md:text-base font-semibold text-red-700 animate-pulse">{mensagem || "Aguardando vencedores (ficção)..."}</p>
+            </div>
+          </section>
+
+          {/* Totais & prêmio */}
+          <section className="grid md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-white rounded-2xl shadow p-4 text-center">
+              <p className="text-sm">Total de apostas registradas*</p>
+              <p className="text-2xl font-extrabold">{totalApostas.toLocaleString("pt-BR")}</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow p-4 text-center">
+              <p className="text-sm">Total arrecadado (fictício)</p>
+              <p className="text-2xl font-extrabold">{formatBRL(totalArrecadado)}</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow p-4 text-center">
+              <p className="text-sm">Prêmio do mês ({premioPercentual}%)</p>
+              <p className="text-2xl font-extrabold">{formatBRL(premioPrevisto)}</p>
+            </div>
+          </section>
+
+          {/* Escolhas da aposta */}
+          <section className="bg-white rounded-2xl shadow p-6 mb-8">
+            <h3 className="text-xl font-bold mb-4">Monte sua aposta (ficção)</h3>
+
+            <div className="grid md:grid-cols-3 gap-4 items-end">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Quantidade de números</label>
+                <select
+                  className="w-full border rounded-xl px-3 py-2"
+                  value={qtdNumeros}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setQtdNumeros(v);
+                    setSelecionados([]);
+                  }}
+                >
+                  {/* Limitado às opções dadas pelo usuário */}
+                  <option value={7}>7 números — {formatBRL(precosPorQuantidade[7])}</option>
+                  <option value={8}>8 números — {formatBRL(precosPorQuantidade[8])}</option>
+                  <option value={9}>9 números — {formatBRL(precosPorQuantidade[9])}</option>
+                  <option value={10}>10 números — {formatBRL(precosPorQuantidade[10])}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">Quantidade de apostas</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={1000}
+                  className="w-full border rounded-xl px-3 py-2"
+                  value={qtdApostas}
+                  onChange={(e) => setQtdApostas(Math.min(1000, Math.max(1, Number(e.target.value) || 1)))}
+                />
+                <p className="text-xs mt-1">Até 1000 apostas</p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-sm">Total desta compra</p>
+                <p className="text-2xl font-extrabold">{formatBRL(totalCompra)}</p>
+              </div>
+            </div>
+
+            {/* Grid de números 1–70 */}
+            <div className="mt-6 grid grid-cols-10 gap-2">
+              {Array.from({ length: 70 }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => toggleNumero(n)}
+                  className={`w-10 h-10 rounded-full text-sm font-bold transition
+                    ${selecionados.includes(n) ? "bg-red-600 text-white" : "bg-gray-100 hover:bg-gray-200"}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-sm">Selecionados ({selecionados.length}/{qtdNumeros}): {selecionados.join(", ") || "nenhum"}</p>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <button
+                onClick={confirmarAposta}
+                disabled={!podeConfirmar}
+                className="bg-green-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-2xl shadow-lg hover:scale-[1.02] transition"
+              >
+                Confirmar Aposta (fictícia)
+              </button>
+
+              {/* seletor administrativo do percentual (fica visível para o autor) */}
+              <div className="text-xs">
+                <label className="mr-2">% do prêmio (apenas autor):</label>
+                <select
+                  value={premioPercentual}
+                  onChange={(e) => setPremioPercentual(Number(e.target.value))}
+                  className="border rounded-lg px-2 py-1"
+                >
+                  {opcoesPremio.map((p) => (
+                    <option key={p} value={p}>{p}%</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* PIX FICTÍCIO */}
+            {pixPayload && (
+              <div className="mt-6 grid md:grid-cols-2 gap-6 items-center">
+                <div className="bg-gray-50 p-4 rounded-xl">
+                  <h4 className="font-bold mb-2">PIX (fictício) — Copia e Cola</h4>
+                  <p className="text-xs break-all border rounded-lg p-2 bg-white">{pixPayload}</p>
+                  <p className="text-xs mt-2">Banco: pagBank (fictício) • Chave: c8875076-656d-4a18-8094-c70c67dbb56c • TXID: {pixTxid}</p>
+                  <p className="text-[11px] mt-2 italic">Este QR/PIX é meramente ilustrativo e não processa pagamentos reais.</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl flex items-center justify-center">
+                  <QRCode value={pixPayload} size={196} />
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Depoimentos com fotos */}
+          <section className="mb-16">
+            <h3 className="text-xl font-bold mb-4">Depoimentos (ficcionais)</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              {depoimentos.map((d, idx) => (
+                <div key={idx} className="bg-white rounded-2xl shadow p-4 flex gap-3">
+                  <img src={d.foto} alt={d.nome} className="w-14 h-14 rounded-full object-cover" />
+                  <div>
+                    <p className="italic leading-snug">{d.texto}</p>
+                    <p className="text-right font-bold mt-2">– {d.nome}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <footer className="text-center text-xs text-gray-700">
+            * Totais e premiação são contadores fictícios armazenados localmente no seu navegador (sem validade jurídica).
+          </footer>
+        </main>
+      ) : (
+        <IndicacoesView refAtual={refAtual} setRefAtual={setRefAtual} />
+      )}
+    </div>
+  );
+}
+
+// ================================
+// VIEW: Indicações (liberada após aposta com >= 9 números)
+// ================================
+function IndicacoesView({ refAtual }) {
+  const [lista, setLista] = useState(() => {
+    const raw = localStorage.getItem(LS_INDICACOES);
+    return raw ? JSON.parse(raw) : {};
+  });
+
+  // garante que o código do usuário exista no ranking
+  useEffect(() => {
+    if (!lista[refAtual.codigo]) {
+      const novo = { ...lista, [refAtual.codigo]: 0 };
+      setLista(novo);
+      localStorage.setItem(LS_INDICACOES, JSON.stringify(novo));
+    }
+  }, []);
+
+  const [novoEmail, setNovoEmail] = useState("");
+
+  // registra uma indicação (apenas contagem local)
+  const registrarIndicacao = (e) => {
+    e.preventDefault();
+    const email = (novoEmail || "").trim().toLowerCase();
+    if (!email || !email.includes("@")) return;
+    const updated = { ...lista, [refAtual.codigo]: (lista[refAtual.codigo] || 0) + 1 };
+    setLista(updated);
+    localStorage.setItem(LS_INDICACOES, JSON.stringify(updated));
+    setNovoEmail("");
+  };
+
+  // ranking simples (top 10)
+  const ranking = Object.entries(lista)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  const linkCompartilhar = `${window.location.origin}/?ref=${refAtual.codigo}`;
+
+  return (
+    <main className="px-6 pb-24 max-w-4xl mx-auto">
+      <section className="text-center mb-6">
+        <h2 className="text-3xl md:text-4xl font-black text-red-700">Convide seus amigos</h2>
+        <p className="mt-2 max-w-2xl mx-auto">
+          Quanto mais pessoas você indicar, mais chances terá de ganhar no final do mês. Use seu link de indicação
+          exclusivo abaixo para compartilhar. (Sem revelar regras internas.)
+        </p>
+      </section>
+
+      <section className="bg-white rounded-2xl shadow p-6 mb-8">
+        <h3 className="text-xl font-bold mb-2">Seu código</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="px-3 py-2 rounded-xl bg-gray-100 font-mono text-sm">{refAtual.codigo}</span>
+          <button
+            onClick={() => navigator.clipboard.writeText(refAtual.codigo)}
+            className="px-3 py-2 rounded-xl bg-gray-900 text-white"
+          >
+            Copiar código
+          </button>
+        </div>
+
+        <h4 className="font-semibold mt-4">Link de indicação</h4>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="px-3 py-2 rounded-xl bg-gray-100 font-mono text-xs break-all">{linkCompartilhar}</span>
+          <button
+            onClick={() => navigator.clipboard.writeText(linkCompartilhar)}
+            className="px-3 py-2 rounded-xl bg-gray-900 text-white"
+          >
+            Copiar link
+          </button>
+        </div>
+
+        <form onSubmit={registrarIndicacao} className="mt-6">
+          <label className="block text-sm font-semibold mb-1">Registrar uma indicação (simulado)</label>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              placeholder="email do amigo"
+              className="flex-1 border rounded-xl px-3 py-2"
+              value={novoEmail}
+              onChange={(e) => setNovoEmail(e.target.value)}
+            />
+            <button className="px-4 py-2 rounded-xl bg-green-600 text-white">Adicionar</button>
+          </div>
+          <p className="text-xs mt-1">Apenas demonstrativo: os contatos não são enviados a nenhum servidor.</p>
+        </form>
+      </section>
+
+      <section className="bg-white rounded-2xl shadow p-6">
+        <h3 className="text-xl font-bold mb-4">Ranking (top 10)</h3>
+        <div className="divide-y">
+          {ranking.map(([codigo, pontos], i) => (
+            <div key={codigo} className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold">{i + 1}</span>
+                <span className="font-mono">{codigo}</span>
+              </div>
+              <span className="text-sm">{pontos} indicações</span>
+            </div>
+          ))}
+          {ranking.length === 0 && <p className="text-sm text-gray-600">Sem indicações ainda.</p>}
+        </div>
+      </section>
+
+      <footer className="text-center text-xs text-gray-700 mt-8">
+        As indicações registradas aqui são apenas contadores locais para fins demonstrativos.
+      </footer>
+    </main>
+  );
+}

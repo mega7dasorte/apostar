@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sorteio 7 Números</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #fafafa; }
+    .numeros button { margin: 3px; padding: 10px; }
+    .mensagens, .depoimentos { margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h1>Escolha seus 7 números (1 a 70)</h1>
+  <div class="numeros" id="numeros"></div>
+  <p id="escolhidos"></p>
+  <button id="apostar">Fazer aposta</button>
+  <p id="status"></p>
+
+  <div class="mensagens">
+    <h2>Mensagens em tempo real</h2>
+    <ul id="listaMensagens"></ul>
+  </div>
+
+  <div class="depoimentos">
+    <h2>Depoimentos de milionários</h2>
+    <ul>
+      <li>Maria, São Paulo: "Minha vida mudou com os 500 mil!"</li>
+      <li>João, Rio de Janeiro: "Nunca imaginei ganhar tanto."</li>
+      <li>Ana, Salvador: "Agora sou milionária!"</li>
+    </ul>
+  </div>
+
+  <script>
+    const numerosDiv = document.getElementById("numeros");
+    const escolhidosP = document.getElementById("escolhidos");
+    const listaMensagens = document.getElementById("listaMensagens");
+    let escolhidos = [];
+
+    // Criar botões 1-70
+    for (let i = 1; i <= 70; i++) {
+      const btn = document.createElement("button");
+      btn.textContent = i;
+      btn.onclick = () => {
+        if (escolhidos.length < 7 && !escolhidos.includes(i)) {
+          escolhidos.push(i);
+          escolhidosP.textContent = "Escolhidos: " + escolhidos.join(", ");
+        }
+      };
+      numerosDiv.appendChild(btn);
+    }
+
+    document.getElementById("apostar").onclick = async () => {
+      if (escolhidos.length !== 7) {
+        alert("Você deve escolher exatamente 7 números!");
+        return;
+      }
+
+      const res = await fetch("https://<sua-url-supabase-functions>/apostas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ numeros: escolhidos, valor: 20 })
+      }); 
+
+      const data = await res.json();
+      document.getElementById("status").textContent = data.sucesso
+        ? "Aposta registrada com sucesso!"
+        : "Erro: " + data.error;
+    };
+
+    // Mensagens aleatórias simuladas
+    const nomes = ["Carlos", "Fernanda", "José", "Paula", "Bruno", "Marina"];
+    setInterval(() => {
+      const nome = nomes[Math.floor(Math.random() * nomes.length)];
+      const msg = `${nome} acabou de ganhar!`;
+      const li = document.createElement("li");
+      li.textContent = msg;
+      listaMensagens.prepend(li);
+    }, 5000);
+  </script>
+</body>
+</html>

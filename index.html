@@ -1,169 +1,70 @@
-<!doctype html>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mega7 — Concorra a R$ 500.000</title>
-  <meta name="description" content="Mega7 — escolha 7 números, indique amigos e aumente suas chances. Projeto fictício / artístico." />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorteio Oficial</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Supabase client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="brand">
-      <h1>Mega7</h1>
-      <p class="tag">Escolha. Indique. Concorra a R$ 500.000 — (Ficcional)</p>
-    </div>
-    <nav class="top-links">
-      <a href="#" id="link-termos">Termos</a>
-      <a href="#" id="link-privacidade">Privacidade</a>
-      <a href="https://www.caixa.gov.br" target="_blank" rel="noopener">Caixa Econômica Federal</a>
-    </nav>
+  <header>
+    <h1>🎉 Participe do Sorteio Oficial 🎉</h1>
   </header>
 
-  <main class="container">
-    <!-- HERO -->
-    <section class="hero">
-      <div class="hero-left">
-        <h2>Concorra a <span class="highlight">R$ 500.000</span></h2>
-        <p class="lead">Escolha sua combinação de 7 números entre 1 e 70. Opcional: aumente a quantidade de números por aposta.</p>
-        <div class="cta-row">
-          <button id="btn-play" class="btn-primary">Jogar Agora (Ficcional)</button>
-          <div class="trust">
-            <span class="shield">🔒</span>
-            <span>Site Seguro • Dados protegidos</span>
-          </div>
-        </div>
-
-        <div class="prizes">
-          <p>Prêmio do mês (estimado): <strong id="prizeValue">R$ 0,00</strong></p>
-          <p>Último dia do mês: <strong id="drawDate"></strong> • <span id="countdown">--:--:--</span></p>
-        </div>
-
-        <div class="totals">
-          <div>Participações registradas: <strong id="totalApostas">0</strong></div>
-          <div>Total arrecadado (fictício): <strong id="totalArrecadado">R$ 0,00</strong></div>
-        </div>
-      </div>
-
-      <div class="hero-right">
-        <div class="messages-card">
-          <img id="msgAvatar" src="" alt="avatar" class="avatar-sm">
-          <div>
-            <p id="liveMessage">Aguardando vencedores (ficção)...</p>
-          </div>
-        </div>
-
-        <div class="testimonials" id="testimonials">
-          <!-- depoimentos carregados via JS -->
-        </div>
-      </div>
+  <main>
+    <section class="cta">
+      <p>Quanto mais amigos você indicar e mais apostas eles fizerem, maiores são suas chances de ganhar! 💰🎉</p>
+      <form id="participarForm">
+        <input type="text" id="nome" placeholder="Seu nome" required>
+        <input type="email" id="email" placeholder="Seu e-mail" required>
+        <button type="submit">Participar</button>
+      </form>
     </section>
 
-    <!-- Aposta -->
-    <section class="panel" id="betPanel">
-      <h3>Monte sua aposta (fictícia)</h3>
-
-      <div class="controls">
-        <label>Quantidade de números:
-          <select id="selectQtdNumeros">
-            <option value="7">7 — R$ 39,90 (promo)</option>
-            <option value="8">8 — R$ 56,00</option>
-            <option value="9">9 — R$ 63,00</option>
-            <option value="10">10 — R$ 70,00</option>
-          </select>
-        </label>
-
-        <label>Quantidade de apostas:
-          <input id="inputQtdApostas" type="number" min="1" max="1000" value="1">
-        </label>
-
-        <div class="total">Total da compra: <strong id="totalCompra">R$ 39,90</strong></div>
-      </div>
-
-      <div class="grid-nums" id="gridNumbers"></div>
-
-      <p class="selected" id="selectedText">Selecionados (0): —</p>
-
-      <div class="actions">
-        <button id="confirmBet" class="btn-primary" disabled>Confirmar Aposta (Ficcional)</button>
-        <button id="clearSelection" class="btn-ghost">Limpar</button>
-      </div>
-
-      <!-- PIX FICTÍCIO -->
-      <div id="pixBlock" class="pix-block hidden">
-        <h4>PIX (fictício) — Copiar e colar</h4>
-        <pre id="pixPayload"></pre>
-        <div id="qrcode"></div>
-        <p class="small">Banco: pagBank (fictício) • Chave: c8875076-656d-4a18-8094-c70c67dbb56c</p>
-      </div>
+    <section class="links-seguranca">
+      <h2>🔒 Segurança</h2>
+      <p>
+        <a href="https://www.caixa.gov.br" target="_blank">Caixa Econômica Federal</a> |
+        <a href="https://gov.br" target="_blank">Segurança Oficial</a>
+      </p>
     </section>
 
-    <!-- Indicações -->
-    <section class="panel" id="referralsPanel">
-      <div class="ref-header">
-        <h3>Indique amigos — aumente suas chances</h3>
-        <div id="slogan" class="slogan">Quanto mais amigos você indicar e mais apostas eles fizerem, maiores são suas chances de ganhar! 💰🎉</div>
-      </div>
-
-      <div class="ref-body">
-        <div>
-          <p>Seu código de indicação:</p>
-          <div class="code-row">
-            <span id="myRefCode" class="refcode">—</span>
-            <button id="copyRef" class="btn-ghost">Copiar</button>
-          </div>
-
-          <p>Link para compartilhar:</p>
-          <div class="code-row">
-            <span id="myRefLink" class="linkcode">—</span>
-            <button id="copyLink" class="btn-ghost">Copiar link</button>
-          </div>
-
-          <form id="fakeReferForm" class="small-form">
-            <label>Registrar indicação (simulado)</label>
-            <input id="referEmail" type="email" placeholder="email do amigo (simulado)">
-            <button id="registerRefer" class="btn-primary small">Registrar</button>
-            <p class="small">Indicações só contam se o indicado concluir ao menos 1 aposta confirmada.</p>
-          </form>
-        </div>
-
-        <div>
-          <h4>Ranking (Top 10)</h4>
-          <ol id="rankingList" class="ranking"></ol>
-        </div>
-      </div>
-    </section>
-
-    <!-- Regras e links -->
-    <section class="panel rules">
-      <h3>Regras de Participação</h3>
+    <section class="regras">
+      <h2>📜 Regras do Sorteio</h2>
       <ul>
-        <li>Site fictício / artístico. Não constitui jogo de azar real.</li>
-        <li>Fotos nos depoimentos e mensagens são fictícias e com pessoas maiores de 18 anos.</li>
-        <li>Indicações só são válidas quando o indicado tiver uma aposta com status <strong>confirmed</strong> no mês vigente.</li>
-        <li>O vencedor mensal será quem tiver mais indicações válidas (desempates por soma de valores).</li>
-        <li>O prêmio será pago manualmente mediante verificação KYC (nome completo, CPF e chave PIX).</li>
-        <li>O site está disponível mundialmente (mas mantenha responsabilidade local).</li>
+        <li>1. Cada amigo indicado gera um número da sorte.</li>
+        <li>2. Apenas apostas válidas são contabilizadas.</li>
+        <li>3. O sorteio será auditado pela Caixa Econômica Federal.</li>
+        <li>4. A participação é gratuita.</li>
       </ul>
-      <div class="foot-links">
-        <a href="/termos.html">Termos de Uso</a> •
-        <a href="/privacidade.html">Política de Privacidade</a> •
-        <a href="/jogue-com-responsabilidade.html">Jogue com responsabilidade</a> •
-        <a href="https://www.caixa.gov.br/Assuntos/Loterias/Paginas/default.aspx" target="_blank">Regulamentação - Caixa Econômica Federal</a>
-      </div>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div>© <span id="currentYear"></span> Mega7 — Projeto fictício</div>
-    <div class="security-row">
-      <span>🔒 Conexão segura</span>
-      <span>🛡️ Proteção de dados</span>
-    </div>
+  <footer>
+    <p>© 2025 - Sorteio Oficial | Confiável e Transparente</p>
   </footer>
 
-  <script src="app.js"></script>
+  <script>
+    const SUPABASE_URL = "COLE_AQUI_SUA_URL_SUPABASE";
+    const SUPABASE_ANON_KEY = "COLE_AQUI_SUA_ANON_KEY";
+
+    // Exemplo de envio ao backend (que vai estar em Node)
+    const BACKEND_URL = "https://seu-backend.com"; // Exemplo: vercel app url
+
+    document.getElementById("participarForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById("nome").value;
+      const email = document.getElementById("email").value;
+
+      const res = await fetch(`${BACKEND_URL}/participar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, email })
+      });
+
+      const data = await res.json();
+      alert(data.message || "Cadastro realizado com sucesso!");
+    });
+  </script>
 </body>
 </html>

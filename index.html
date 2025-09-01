@@ -1,526 +1,107 @@
-// App.jsx
-import React, { useEffect, useMemo, useState } from "react";
-import QRCode from "react-qr-code";
-import { createClient } from "@supabase/supabase-js";
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sorteio Fictício</title>
+<style>
+  body { font-family: sans-serif; background: #fff3c4; color: #333; margin: 0; padding: 0; }
+  header { padding: 1rem; background: #facc15; display: flex; justify-content: space-between; align-items: center; }
+  h1 { margin: 0; }
+  button { cursor: pointer; }
+  .grid { display: grid; gap: 5px; margin-top: 1rem; }
+  .grid-cols-10 { grid-template-columns: repeat(10, 1fr); }
+  .numero { width: 35px; height: 35px; border-radius: 50%; border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
+  .selecionado { background: #dc2626; color: white; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Sorteio Fictício</h1>
+</header>
 
-/*
-  CONFIG — Substitua estes valores com os seus:
-  - SUPABASE_URL: já informado por você
-  - SUPABASE_ANON_KEY: cole a anon public key do painel Supabase (segura para frontend)
-  - FUNCTION_URL_BASE: exemplo: https://<project>.functions.supabase.co  (ou seu backend)
-*/
-const SUPABASE_URL = "https://rfvkadlbnztnbfwabhzj.supabase.co";
-const SUPABASE_ANON_KEY = "REPLACE_WITH_YOUR_ANON_KEY";
-const FUNCTION_URL_BASE = "https://REPLACE_WITH_YOUR_FUNCTIONS_ENDPOINT";
+<main style="padding:1rem; max-width:600px; margin:auto;">
+  <section>
+    <label>Quantidade de números:
+      <select id="qtdNumeros">
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+      </select>
+    </label>
+    <label>Quantidade de apostas:
+      <input type="number" id="qtdApostas" value="1" min="1" max="1000">
+    </label>
+    <button id="confirmar">Confirmar Aposta</button>
+  </section>
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <section class="grid grid-cols-10" id="numerosGrid"></section>
 
-// ================================
-// UTIL & MOCK DATA (FICCIONAL)
-// ================================
-const nomesBR = [
-  "João da Silva, São Paulo",
-  "Maria Oliveira, Rio de Janeiro",
-  "Carlos Souza, Belo Horizonte",
-  "Fernanda Lima, Recife",
-  "André Santos, Curitiba",
-  "Patrícia Almeida, Salvador",
-  "Ricardo Gomes, Porto Alegre",
-  "Luciana Rocha, Brasília",
-  "Bruno Carvalho, Fortaleza",
-  "Paula Fernandes, Manaus",
-  "Rafaela Martins, Campinas",
-  "Diego Alves, Goiânia",
-  "Camila Teixeira, Natal",
-  "Marcos Vinícius, Santos",
-  "Bianca Castro, Florianópolis",
-];
+  <p>Selecionados: <span id="selecionados"></span></p>
+</main>
 
-// Nomes masculinos e femininos simples para mapping de gênero
-const maleNames = ["João","Carlos","André","Ricardo","Bruno","Diego","Marcos","José","Paulo","Rodrigo"];
-const femaleNames = ["Maria","Fernanda","Patrícia","Luciana","Paula","Rafaela","Camila","Bianca","Juliana","Ana"];
+<script>
+  // ===================== SUPABASE =====================
+  const supabaseUrl = 'https://rfvkadlbnztnbfwabhzj.supabase.co';
+  const supabaseAnonKey = 'COLOQUE_SUA_ANON_KEY_AQUI'; // ⚠️ Substitua pela sua anon key
+  const supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-// Depoimentos (seed)
-const depoimentosSeed = [
-  { nome: "José, Curitiba", texto: "Com esse prêmio, comprei minha casa própria. Foi surreal ver meu nome nas mensagens!" },
-  { nome: "Fernanda, Recife", texto: "Minha vida mudou para sempre. Agora sou milionária (no mundo da ficção)!" },
-  { nome: "Maria, São Paulo", texto: "Realizei meus sonhos com essa sorte imaginária. Uma experiência divertida!" },
-  { nome: "Igor, Belo Horizonte", texto: "Eu não acreditava até ver meu código Pix aparecer. Arte que brinca com expectativas." },
-];
+  // ===================== LÓGICA =====================
+  const qtdNumerosEl = document.getElementById('qtdNumeros');
+  const qtdApostasEl = document.getElementById('qtdApostas');
+  const numerosGridEl = document.getElementById('numerosGrid');
+  const selecionadosEl = document.getElementById('selecionados');
+  const confirmarBtn = document.getElementById('confirmar');
 
-// preços definidos pelo usuário (7–10 números)
-const precosPorQuantidade = { 7: 39.9, 8: 56.0, 9: 63.0, 10: 70.0 };
+  let selecionados = [];
 
-// storage keys
-const LS_REFERENCIA_USUARIO = "sf_user_ref";
-const LS_TOTAL_APOSTAS = "sf_total_apostas";
-const LS_TOTAL_ARRECADADO = "sf_total_arrecadado";
-
-function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-function randomUUID() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0; const v = c === "x" ? r : (r & 0x3) | 0x8; return v.toString(16);
-  });
-}
-function formatBRL(v) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
-
-// fetch avatar from randomuser ensuring adult and matching gender guess
-async function fetchAdultAvatar(gender = "male") {
-  try {
-    const res = await fetch(`https://randomuser.me/api/?gender=${gender}&nat=BR&results=1`);
-    const j = await res.json();
-    const u = j.results[0];
-    if (u && u.dob && u.dob.age >= 18) return u.picture.medium;
-  } catch (e) { /* ignore */ }
-  // fallback pravatar
-  return `https://i.pravatar.cc/300?img=${Math.floor(Math.random()*70)+1}`;
-}
-
-// ================================
-// APP
-// ================================
-export default function App() {
-  const [view, setView] = useState("home"); // "home" | "indicacoes"
-
-  // aposta state
-  const [qtdNumeros, setQtdNumeros] = useState(7);
-  const [selecionados, setSelecionados] = useState([]);
-  const [qtdApostas, setQtdApostas] = useState(1);
-
-  // totals & prize (fetched)
-  const [totalApostas, setTotalApostas] = useState(() => Number(localStorage.getItem(LS_TOTAL_APOSTAS) || 0));
-  const [totalArrecadado, setTotalArrecadado] = useState(() => Number(localStorage.getItem(LS_TOTAL_ARRECADADO) || 0));
-  // Premio percentual is server-side — we won't expose a selector. Keep local fallback 30.
-  const [premioPercentualLocal, setPremioPercentualLocal] = useState(30);
-
-  // dynamic messages
-  const [mensagem, setMensagem] = useState("");
-  const [mensagemFoto, setMensagemFoto] = useState("");
-
-  // pix
-  const [pixPayload, setPixPayload] = useState("");
-  const [pixTxid, setPixTxid] = useState("");
-
-  // ref code
-  const [refAtual, setRefAtual] = useState(() => {
-    const saved = localStorage.getItem(LS_REFERENCIA_USUARIO);
-    if (saved) return JSON.parse(saved);
-    const novo = { id: randomUUID(), codigo: `REF-${Math.random().toString(36).slice(2,8).toUpperCase()}` };
-    localStorage.setItem(LS_REFERENCIA_USUARIO, JSON.stringify(novo));
-    return novo;
-  });
-
-  // liberar indicações (após aposta >=9)
-  const [liberouIndicacoes, setLiberouIndicacoes] = useState(false);
-
-  // depoimentos com avatar (gender-matching)
-  const depoimentos = useMemo(() => depoimentosSeed, []);
-  const [depoimentosComFoto, setDepoimentosComFoto] = useState([]);
-
-  // prize display (fetched)
-  const [premioValor, setPremioValor] = useState(0);
-
-  // cronômetro
-  const [timeLeft, setTimeLeft] = useState("");
-
-  // helpers derived
-  const precoUnitario = precosPorQuantidade[qtdNumeros] || 0;
-  const totalCompra = precoUnitario * qtdApostas;
-  const podeConfirmar = selecionados.length === qtdNumeros && qtdApostas >= 1 && qtdApostas <= 1000 && precoUnitario > 0;
-
-  // --- effects: dynamic message ticker & avatars & cronômetro ---
-  useEffect(() => {
-    // initially fetch random avatar for messages ensuring adult and matching gender of name
-    let mounted = true;
-    const tick = async () => {
-      const nomeRaw = getRandomItem(nomesBR);
-      const first = nomeRaw.split(" ")[0];
-      const guessGender = maleNames.includes(first) ? "male" : femaleNames.includes(first) ? "female" : (Math.random() > 0.5 ? "male":"female");
-      const avatar = await fetchAdultAvatar(guessGender);
-      if (!mounted) return;
-      setMensagem(`${nomeRaw} acabou de ganhar R$ 500.000! (ficção)`);
-      setMensagemFoto(avatar);
-    };
-    tick();
-    const id = setInterval(tick, 3000);
-    return () => { mounted = false; clearInterval(id); };
-  }, []);
-
-  useEffect(() => {
-    // preload depoimento avatars with gender guess
-    (async () => {
-      const mapped = await Promise.all(depoimentos.map(async (d) => {
-        const first = d.nome.split(" ")[0];
-        const guessGender = maleNames.includes(first) ? "male" : femaleNames.includes(first) ? "female" : (Math.random()>0.5 ? "male":"female");
-        const avatar = await fetchAdultAvatar(guessGender);
-        return { ...d, avatar };
-      }));
-      setDepoimentosComFoto(mapped);
-    })();
-  }, [depoimentos]);
-
-  useEffect(() => {
-    // countdown to last day of month 23:59:59
-    const update = () => {
-      const now = new Date();
-      const last = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59);
-      const diff = last - now;
-      if (diff <= 0) { setTimeLeft("Sorteio em andamento"); return; }
-      const d = Math.floor(diff / (1000*60*60*24));
-      const h = Math.floor((diff/(1000*60*60))%24);
-      const m = Math.floor((diff/(1000*60))%60);
-      const s = Math.floor((diff/1000)%60);
-      setTimeLeft(`${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
-    };
-    update();
-    const id = setInterval(update, 1000);
-    return ()=>clearInterval(id);
-  }, []);
-
-  // persist totals
-  useEffect(() => { localStorage.setItem(LS_TOTAL_APOSTAS, String(totalApostas)); }, [totalApostas]);
-  useEffect(() => { localStorage.setItem(LS_TOTAL_ARRECADADO, String(totalArrecadado)); }, [totalArrecadado]);
-
-  // ========== functions ==========
-
-  // toggle number in grid
-  const toggleNumero = (n) => {
-    if (selecionados.includes(n)) setSelecionados(selecionados.filter(x=>x!==n));
-    else if (selecionados.length < qtdNumeros) setSelecionados([...selecionados, n]);
-  };
-
-  // Ensures local user (simple record in users table if not exists) and returns id/ref_code
-  async function ensureUser() {
-    const saved = JSON.parse(localStorage.getItem(LS_REFERENCIA_USUARIO) || "null");
-    if (saved && saved.id) {
-      // try to fetch associated user row by ref_code
-      try {
-        const { data } = await supabase.from("users").select("id,ref_code").eq("ref_code", saved.codigo).limit(1).single();
-        if (data) {
-          // store user id in local storage for later
-          localStorage.setItem("mega7_user_id", data.id);
-          return { id: data.id, code: data.ref_code };
-        }
-      } catch(e){ /* ignore */ }
+  function renderGrid() {
+    numerosGridEl.innerHTML = '';
+    for (let i=1; i<=70; i++){
+      const btn = document.createElement('div');
+      btn.textContent = i;
+      btn.className = 'numero' + (selecionados.includes(i) ? ' selecionado' : '');
+      btn.onclick = () => toggleNumero(i);
+      numerosGridEl.appendChild(btn);
     }
-    // create new user minimal
-    const display = `User-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
-    const insert = { full_name: display, ref_code: (randomUUID().slice(0,6).toUpperCase()) };
-    // attempt to insert and return id
-    const { data, error } = await supabase.from("users").insert([insert]).select().single();
+    selecionadosEl.textContent = selecionados.join(', ');
+  }
+
+  function toggleNumero(n) {
+    const max = parseInt(qtdNumerosEl.value);
+    if (selecionados.includes(n)) {
+      selecionados = selecionados.filter(x => x!==n);
+    } else if (selecionados.length < max) {
+      selecionados.push(n);
+    }
+    renderGrid();
+  }
+
+  confirmarBtn.onclick = async () => {
+    const qtdNumeros = parseInt(qtdNumerosEl.value);
+    const qtdApostas = parseInt(qtdApostasEl.value);
+    if (selecionados.length !== qtdNumeros) {
+      alert(`Escolha exatamente ${qtdNumeros} números`);
+      return;
+    }
+
+    // Envio para Supabase (tabela fictícia: apostas)
+    const { data, error } = await supabase
+      .from('apostas')
+      .insert([{ numeros: selecionados, qtdApostas, criado_em: new Date() }]);
+
     if (error) {
-      console.error("ensureUser error", error);
-      // fallback create local-only id
-      return { id: randomUUID(), code: insert.ref_code };
-    }
-    // save local ref
-    const localRef = { id: data.id, codigo: data.ref_code };
-    localStorage.setItem(LS_REFERENCIA_USUARIO, JSON.stringify(localRef));
-    return { id: data.id, code: data.ref_code };
-  }
-
-  // call serverless function to register a bet (server handles aggregates & referrals)
-  async function postBetToFunction(payload) {
-    const url = `${FUNCTION_URL_BASE}/aposta`;
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(payload) });
-    return res.json();
-  }
-
-  const confirmarAposta = async () => {
-    if (!podeConfirmar) return;
-    // ensure user
-    const user = await ensureUser();
-    // build payload for function
-    const payload = {
-      user_id: user.id,
-      numeros: selecionados,
-      quantity_numbers: qtdNumeros,
-      qty_tickets: qtdApostas,
-      unit_price: precoUnitario,
-      client_ip: null,
-      user_agent: navigator.userAgent,
-      ref_code: user.code // user's own ref code stored on users.ref_code
-    };
-
-    // optimistic local totals
-    setTotalApostas(t=>t + qtdApostas);
-    setTotalArrecadado(v=>v + totalCompra);
-
-    // call function (server-side will insert bet and update aggregates)
-    try {
-      const result = await postBetToFunction(payload);
-      if (result?.error) {
-        console.error("postBet error", result.error);
-        alert("Erro ao registrar aposta: " + (result.error?.message || JSON.stringify(result.error)));
-        return;
-      }
-      // function should return pix_payload & txid
-      setPixPayload(result.pix_payload || `PIX-FICTICIO|VLR:${totalCompra.toFixed(2)}`);
-      setPixTxid(result.txid || randomUUID().slice(0,25));
-      // reset selection
-      setSelecionados([]);
-      // liberate referrals if qtyNumbers >=9
-      if (qtdNumeros >= 9) setLiberouIndicacoes(true);
-      // refresh prize via server
-      fetchPrize();
-      // refresh ranking (optional)
-    } catch (err) {
-      console.error(err);
-      alert("Erro de rede ao confirmar aposta.");
+      alert('Erro ao registrar aposta: ' + error.message);
+    } else {
+      alert('Aposta registrada com sucesso (ficção)');
+      selecionados = [];
+      renderGrid();
     }
   };
 
-  async function fetchPrize() {
-    try {
-      const month = new Date().toISOString().slice(0,7);
-      const res = await fetch(`${FUNCTION_URL_BASE}/get_prize?month=${month}`);
-      const json = await res.json();
-      if (json.premio_valor != null) setPremioValor(Number(json.premio_valor));
-      else {
-        // fallback local calc
-        setPremioValor((totalArrecadado * premioPercentualLocal)/100);
-      }
-    } catch (e) {
-      setPremioValor((totalArrecadado * premioPercentualLocal)/100);
-    }
-  }
-
-  // register a referral: calls register_referral function with ref code & referred email
-  async function registerReferral(refCode, referredEmail) {
-    const url = `${FUNCTION_URL_BASE}/register_referral`;
-    const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ ref_code: refCode, referred_email: referredEmail })});
-    const json = await res.json();
-    return json;
-  }
-
-  // load ranking from function
-  const [ranking, setRanking] = useState([]);
-  async function loadRanking() {
-    try {
-      const res = await fetch(`${FUNCTION_URL_BASE}/ranking`);
-      const json = await res.json();
-      setRanking(json.ranking || []);
-    } catch (e) {
-      // fallback to local storage ranking (demo)
-      const raw = JSON.parse(localStorage.getItem("sf_indices") || "{}");
-      const arr = Object.entries(raw).map(([code,count])=>({ code, count })).sort((a,b)=>b.count-a.count).slice(0,10);
-      setRanking(arr);
-    }
-  }
-
-  // initial load
-  useEffect(()=>{ fetchPrize(); loadRanking(); }, []);
-
-  // ========== UI ==========
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-yellow-300 text-gray-900 p-4">
-      <header className="max-w-5xl mx-auto flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold">Mega7</h1>
-          <p className="text-sm text-gray-700">Escolha. Indique. Concorra a R$ 500.000 — Projeto fictício</p>
-        </div>
-        <nav className="flex gap-3 items-center">
-          <button className={`px-3 py-2 rounded-xl ${view==="home" ? "bg-white":"bg-white/60"}`} onClick={()=>setView("home")}>Página Inicial</button>
-          <button className={`px-3 py-2 rounded-xl ${view==="indicacoes" ? "bg-white":"bg-white/60"}`} onClick={()=>setView("indicacoes")} disabled={!liberouIndicacoes} title={!liberouIndicacoes ? "Liberado após aposta com 9+ números" : "Indicar amigos"}>Indicações</button>
-        </nav>
-      </header>
-
-      {view === "home" ? (
-        <main className="max-w-5xl mx-auto">
-          {/* HERO */}
-          <section className="mb-6 p-6 bg-white rounded-2xl shadow flex flex-col md:flex-row gap-6">
-            <div className="flex-1">
-              <h2 className="text-3xl font-bold text-red-700">Concorra a <span className="text-4xl">R$ 500.000</span></h2>
-              <p className="mt-2 text-sm text-gray-600">Quanto mais indicar e mais apostas as suas indicações fizerem, maiores suas chances. Promoção fictícia.</p>
-              <div className="mt-4 flex gap-4 items-center">
-                <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-orange-400 text-white font-bold" onClick={()=>document.getElementById('gridNumbers')?.scrollIntoView({behavior:'smooth'})}>Jogar Agora</button>
-                <div className="text-sm text-gray-500">Prêmio estimado: <strong>{formatBRL(premioValor)}</strong></div>
-              </div>
-              <div className="mt-3 text-xs text-gray-500">Sorteio: último dia do mês • Tempo restante: <strong>{timeLeft}</strong></div>
-            </div>
-            <div className="w-72">
-              <div className="p-3 bg-gray-50 rounded-lg shadow flex items-center gap-3">
-                <img src={mensagemFoto} alt="avatar" className="w-12 h-12 rounded-full object-cover" />
-                <div>
-                  <div className="text-xs text-red-600 font-semibold">Última vitória (ficção)</div>
-                  <div className="text-sm">{mensagem}</div>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                {depoimentosComFoto.slice(0,3).map((d,i)=>(
-                  <div key={i} className="bg-white p-3 rounded-lg shadow flex gap-3 items-center">
-                    <img src={d.avatar} alt={d.nome} className="w-10 h-10 rounded-full object-cover" />
-                    <div className="text-sm">
-                      <div className="font-semibold">{d.nome}</div>
-                      <div className="text-xs text-gray-600">{d.texto}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Totals */}
-          <section className="grid md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-xl shadow text-center">
-              <div className="text-sm text-gray-600">Participações registradas</div>
-              <div className="text-2xl font-bold">{totalApostas.toLocaleString('pt-BR')}</div>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow text-center">
-              <div className="text-sm text-gray-600">Total arrecadado (fictício)</div>
-              <div className="text-2xl font-bold">{formatBRL(totalArrecadado)}</div>
-            </div>
-            <div className="bg-white p-4 rounded-xl shadow text-center">
-              <div className="text-sm text-gray-600">Prêmio do mês</div>
-              <div className="text-2xl font-bold">{formatBRL(premioValor)}</div>
-            </div>
-          </section>
-
-          {/* Aposta */}
-          <section id="betPanel" className="bg-white p-6 rounded-2xl shadow mb-8">
-            <h3 className="text-xl font-bold mb-4">Monte sua aposta</h3>
-
-            <div className="grid md:grid-cols-3 gap-4 items-end">
-              <div>
-                <label className="block text-sm font-semibold mb-1">Quantidade de números</label>
-                <select value={qtdNumeros} onChange={(e)=>{ setQtdNumeros(Number(e.target.value)); setSelecionados([]); }} className="w-full border rounded-xl p-2">
-                  <option value={7}>7 números — {formatBRL(precosPorQuantidade[7])}</option>
-                  <option value={8}>8 números — {formatBRL(precosPorQuantidade[8])}</option>
-                  <option value={9}>9 números — {formatBRL(precosPorQuantidade[9])}</option>
-                  <option value={10}>10 números — {formatBRL(precosPorQuantidade[10])}</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold mb-1">Quantidade de apostas</label>
-                <input type="number" min={1} max={1000} value={qtdApostas} onChange={(e)=>setQtdApostas(Math.min(1000, Math.max(1, Number(e.target.value)||1)))} className="w-full border rounded-xl p-2" />
-                <div className="text-xs text-gray-500 mt-1">Máx. 1000 apostas</div>
-              </div>
-
-              <div className="text-right">
-                <div className="text-sm text-gray-600">Total desta compra</div>
-                <div className="text-2xl font-bold">{formatBRL(totalCompra)}</div>
-              </div>
-            </div>
-
-            {/* Grid numbers */}
-            <div id="gridNumbers" className="mt-6 grid grid-cols-10 gap-2">
-              {Array.from({ length: 70 }, (_,i)=>i+1).map(n=>(
-                <button key={n} onClick={()=>toggleNumero(n)} className={`w-10 h-10 rounded-full ${selecionados.includes(n) ? "bg-red-600 text-white":"bg-gray-100 hover:bg-gray-200"}`}>
-                  {n}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-3 text-sm text-gray-700">Selecionados ({selecionados.length}/{qtdNumeros}): {selecionados.join(", ") || "nenhum"}</div>
-
-            <div className="mt-4 flex items-center justify-between gap-4">
-              <div className="flex gap-3">
-                <button disabled={!podeConfirmar} onClick={confirmarAposta} className={`px-4 py-2 rounded-xl font-bold ${podeConfirmar ? "bg-green-600 text-white":"bg-gray-300 text-gray-600"}`}>Confirmar Aposta (fictícia)</button>
-                <button onClick={()=>{ setSelecionados([]); }} className="px-4 py-2 rounded-xl border">Limpar</button>
-              </div>
-
-              <div className="text-xs text-gray-500">Atenção: este site é fictício. Não processa pagamentos reais.</div>
-            </div>
-
-            {/* PIX fictício */}
-            {pixPayload && (
-              <div className="mt-6 grid md:grid-cols-2 gap-6 items-center">
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <h4 className="font-bold mb-2">PIX (fictício) — Copia e Cola</h4>
-                  <pre className="text-xs break-words bg-white p-2 rounded">{pixPayload}</pre>
-                  <div className="text-xs mt-2">Banco: pagBank (fictício) • Chave: c8875076-656d-4a18-8094-c70c67dbb56c • TXID: {pixTxid}</div>
-                </div>
-                <div className="bg-white p-4 rounded-xl flex items-center justify-center">
-                  <QRCode value={pixPayload} size={196} />
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Footer rules */}
-          <section className="bg-white p-4 rounded-xl text-sm text-gray-700 mb-12">
-            <h4 className="font-bold mb-2">Regras de Participação</h4>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Site fictício / artístico. Não constitui jogo de azar real.</li>
-              <li>Fotos usadas em mensagens e depoimentos são de pessoas maiores de 18 anos (fictícias).</li>
-              <li>Indicações só contam se o indicado tiver pelo menos 1 aposta com status <strong>confirmed</strong> no mês vigente.</li>
-              <li>Vencedor mensal: quem tiver mais indicações válidas (desempate por soma de valores confirmados).</li>
-              <li>O pagamento do prêmio é realizado manualmente após verificação KYC (nome completo, CPF e chave PIX).</li>
-              <li>Disponível mundialmente; obedeça às leis locais.</li>
-            </ul>
-            <div className="mt-3 text-xs">
-              Links: <a className="text-blue-600 underline" href="/termos.html">Termos</a> • <a className="text-blue-600 underline" href="/privacidade.html">Privacidade</a> • <a className="text-blue-600 underline" href="https://www.caixa.gov.br" target="_blank" rel="noreferrer">Caixa Econômica Federal</a>
-            </div>
-          </section>
-        </main>
-      ) : (
-        <IndicacoesView refAtual={refAtual} liberado={liberouIndicacoes} registerReferral={registerReferral} ranking={ranking} />
-      )}
-
-      <footer className="max-w-5xl mx-auto text-center text-xs text-gray-600">
-        © {new Date().getFullYear()} Mega7 — Projeto fictício. Dados e operações ilustrativos.
-      </footer>
-    </div>
-  );
-}
-
-// ========== Indications View ==========
-function IndicacoesView({ refAtual, liberado, registerReferral, ranking }) {
-  const [novoEmail, setNovoEmail] = useState("");
-  const linkCompartilhar = `${window.location.origin}?ref=${refAtual.codigo}`;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!novoEmail.includes("@")) return alert("Email inválido (simulado).");
-    // call server function to register referral
-    const res = await fetch(`${FUNCTION_URL_BASE}/register_referral`, {
-      method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ ref_code: refAtual.codigo, referred_email: novoEmail })
-    });
-    const j = await res.json();
-    if (j.success) { alert("Indicação registrada."); setNovoEmail(""); }
-    else alert("Erro ao registrar indicação.");
-  };
-
-  return (
-    <main className="max-w-4xl mx-auto">
-      <section className="text-center mb-6">
-        <h2 className="text-3xl font-black text-red-700">Convide seus amigos</h2>
-        <p className="mt-2">Quanto mais amigos você indicar e mais apostas eles fizerem, maiores são suas chances de ganhar! 💰🎉</p>
-      </section>
-
-      <section className="bg-white p-6 rounded-xl mb-6">
-        <h3 className="font-bold">Seu código</h3>
-        <div className="flex gap-3 items-center mt-2">
-          <div className="bg-gray-100 font-mono px-3 py-2 rounded">{refAtual.codigo}</div>
-          <button onClick={()=>navigator.clipboard.writeText(refAtual.codigo)} className="px-3 py-2 bg-gray-900 text-white rounded">Copiar</button>
-        </div>
-
-        <h4 className="mt-4">Link</h4>
-        <div className="flex gap-3 items-center mt-2">
-          <div className="bg-gray-100 px-3 py-2 rounded break-all">{linkCompartilhar}</div>
-          <button onClick={()=>navigator.clipboard.writeText(linkCompartilhar)} className="px-3 py-2 bg-gray-900 text-white rounded">Copiar link</button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mt-4">
-          <label className="block mb-2">Registrar indicação (simulado)</label>
-          <div className="flex gap-2">
-            <input className="flex-1 p-2 border rounded" placeholder="email do amigo" value={novoEmail} onChange={(e)=>setNovoEmail(e.target.value)} />
-            <button className="px-4 py-2 bg-green-600 text-white rounded">Adicionar</button>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">Indicações só são contabilizadas quando o indicado fizer uma aposta confirmada.</p>
-        </form>
-      </section>
-
-      <section className="bg-white p-6 rounded-xl">
-        <h3 className="font-bold mb-3">Ranking (top 10)</h3>
-        <ol className="list-decimal pl-6">
-          {ranking && ranking.length ? ranking.map((r,i)=>( <li key={i} className="py-1">{r.code} — {r.count} indicações válidas</li> )) : <li>Sem indicações ainda</li>}
-        </ol>
-      </section>
-
-      <footer className="text-center text-xs text-gray-500 mt-6">As indicações são registradas no banco central para apuração no fim do mês.</footer>
-    </main>
-  );
-}
+  renderGrid();
+</script>
+</body>
+</html>

@@ -2,11 +2,16 @@
   "name": "apostar",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
+  /*"scripts": {
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist"
+  },*/
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.1",
@@ -32,5 +37,8 @@
   "bugs": {
     "url": "https://github.com/mega7dasorte/apostar/issues"
   },
-  "homepage": "https://mega7dasorte.github.io/apostar/"
+  "homepage": "https://mega7dasorte.github.io/apostar/",
+  "scripts": {
+    "build": "vite build && cp -r dist docs"
+  }
 }

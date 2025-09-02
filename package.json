@@ -1,5 +1,5 @@
 {
-  "name": "meu-sorteio",
+  "name": "apostar",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -9,14 +9,27 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.8.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-qr-code": "^2.0.1"
+    "@supabase/supabase-js": "^2.56.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-qr-code": "^2.0.18"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
     "gh-pages": "^5.0.0",
-    "vite": "^5.0.0"
-  }
+    "vite": "^5.4.19"
+  },
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mega7dasorte/apostar.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mega7dasorte/apostar/issues"
+  },
+  "homepage": "https://github.com/mega7dasorte/apostar#readme"
 }

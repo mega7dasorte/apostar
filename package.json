@@ -37,8 +37,5 @@
   "bugs": {
     "url": "https://github.com/mega7dasorte/apostar/issues"
   },
-  "homepage": "https://mega7dasorte.github.io/apostar/",
-  "scripts": {
-    "build": "vite build && cp -r dist docs"
-  }
+  "homepage": "https://mega7dasorte.github.io/apostar/"
 }

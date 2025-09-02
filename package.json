@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build --outDir docs",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist"
   },

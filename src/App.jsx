@@ -118,7 +118,7 @@ function HomeView() {
       {/* Hero */}
       <section className="hero">
         <h2>Escolha seus números e participe (ficção)</h2>
-        <p>Prêmios de até<strong>R$ 500.000</strong>. Sem transações reais.</p>
+        <p>Prêmios de até <strong>R$ 500.000</strong>. Com transações reais, na hora sem burocacia.</p>
         <p className="text-xs">Este site é uma obra artística/experimental. Nada aqui é um produto financeiro ou aposta real.</p>
       </section>
 

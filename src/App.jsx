@@ -131,8 +131,7 @@ function HomeView() {
       {/* Totais & prêmio */}
       <section className="totais-container">
         <div>Total de apostas: {totalApostas}</div>
-        <div>Total arrecadado (fictício): {formatBRL(totalArrecadado)}</div>
-        <div>Prêmio do mês ({premioPercentual}%): {formatBRL(premioPrevisto)}</div>
+        <div>Prêmio do mês: {formatBRL(premioPrevisto)}</div>
       </section>
 
       {/* Escolhas da aposta */}
@@ -193,6 +192,22 @@ function HomeView() {
 }
 
 // ================================
+// WRAPPER para Indicações
+// ================================
+function IndicacoesViewWrapper() {
+  const [refAtual, setRefAtual] = useState(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(LS_REFERENCIA_USUARIO);
+    if (saved) setRefAtual(JSON.parse(saved));
+  }, []);
+
+  if (!refAtual) return <p>Carregando...</p>;
+
+  return <IndicacoesView refAtual={refAtual} />;
+}
+
+// ================================
 // EXPORTAÇÃO COM ROUTER
 // ================================
 export default function App() {
@@ -207,7 +222,7 @@ export default function App() {
       </header>
       <Routes>
         <Route path="/" element={<HomeView />} />
-        <Route path="/indicacoes" element={<IndicacoesView />} />
+        <Route path="/indicacoes" element={<IndicacoesViewWrapper />} />
       </Routes>
     </Router>
   );

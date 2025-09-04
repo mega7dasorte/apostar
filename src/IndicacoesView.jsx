@@ -9,17 +9,18 @@ export default function IndicacoesView({ refAtual }) {
   });
 
   useEffect(() => {
-    if (!lista[refAtual.codigo]) {
+    if (refAtual && !lista[refAtual.codigo]) {
       const novo = { ...lista, [refAtual.codigo]: 0 };
       setLista(novo);
       localStorage.setItem(LS_INDICACOES, JSON.stringify(novo));
     }
-  }, []);
+  }, [refAtual]);
 
   const [novoEmail, setNovoEmail] = useState("");
 
   const registrarIndicacao = (e) => {
     e.preventDefault();
+    if (!refAtual) return;
     const email = (novoEmail || "").trim().toLowerCase();
     if (!email || !email.includes("@")) return;
     const updated = { ...lista, [refAtual.codigo]: (lista[refAtual.codigo] || 0) + 1 };
@@ -27,6 +28,10 @@ export default function IndicacoesView({ refAtual }) {
     localStorage.setItem(LS_INDICACOES, JSON.stringify(updated));
     setNovoEmail("");
   };
+
+  if (!refAtual) {
+    return <p>Carregando indicações...</p>;
+  }
 
   const ranking = Object.entries(lista).sort((a,b) => b[1]-a[1]).slice(0,10);
   const linkCompartilhar = `${window.location.origin}/#/indicacoes?ref=${refAtual.codigo}`;

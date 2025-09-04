@@ -5,6 +5,6 @@ export default defineConfig({
   plugins: [react()],
   base: "/apostar/", // importante para funcionar no GitHub Pages
   build: {
-    outDir: 'docs'
+    outDir: 'dist'
   }
 });

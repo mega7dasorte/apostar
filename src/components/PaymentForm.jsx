@@ -1,86 +1,70 @@
+// src/components/PaymentForm.jsx
 import React, { useState } from "react";
 import { createPayment } from "../services/payments";
+import PixGenerator from "./PixGenerator";
 
-const PaymentForm = () => {
+export default function PaymentForm() {
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
     email: "",
     celular: "",
-    valor: ""
+    endereco: "",
+    valor: "",
   });
 
-  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [payment, setPayment] = useState(null);
 
-  const handleChange = (e) => {
+  function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  }
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setStatus("processando...");
-
-    try {
-      const response = await createPayment(form);
-      if (response.error) throw response.error;
-      setStatus("✅ Pagamento registrado! Gere o PIX para o usuário.");
-    } catch (err) {
-      console.error(err);
-      setStatus("❌ Erro ao registrar pagamento.");
+    // validações mínimas
+    if (!form.nome || !form.cpf || !form.email || !form.celular || !form.valor) {
+      alert("Preencha todos os campos obrigatórios (nome, cpf, email, celular, valor).");
+      return;
     }
-  };
+
+    setLoading(true);
+    try {
+      const created = await createPayment(form); // insere no Supabase
+      setPayment(created);
+      // NÃO limpamos aqui para que o usuário veja os dados
+    } catch (err) {
+      console.error("Erro criar pagamento:", err);
+      alert("Erro ao criar pagamento. Veja console.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // se já gerou pagamento, mostrar QR e dados
+  if (payment) {
+    return (
+      <div>
+        <h2>Pagamento criado</h2>
+        <p>TXID: <strong>{payment.txid}</strong></p>
+        <p>Valor: <strong>{Number(payment.valor).toFixed(2)}</strong></p>
+        <PixGenerator chavePix="c8875076-656d-4a18-8094-c70c67dbb56c" txid={payment.txid} nome={payment.nome} valor={payment.valor} />
+      </div>
+    );
+  }
 
   return (
     <div className="payment-form">
-      <h2>Efetuar Pagamento</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          name="nome"
-          placeholder="Nome completo"
-          value={form.nome}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="text"
-          name="cpf"
-          placeholder="CPF"
-          value={form.cpf}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="E-mail"
-          value={form.email}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="tel"
-          name="celular"
-          placeholder="Celular"
-          value={form.celular}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="number"
-          name="valor"
-          placeholder="Valor (R$)"
-          value={form.valor}
-          onChange={handleChange}
-          required
-        />
-
-        <button type="submit">Registrar Pagamento</button>
+      <h2>Gerar PIX / Registrar pagamento</h2>
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 10, maxWidth: 520 }}>
+        <input name="nome" value={form.nome} onChange={handleChange} placeholder="Nome completo" required />
+        <input name="cpf" value={form.cpf} onChange={handleChange} placeholder="CPF" required />
+        <input name="email" value={form.email} onChange={handleChange} placeholder="E-mail" required />
+        <input name="celular" value={form.celular} onChange={handleChange} placeholder="Celular" required />
+        <input name="endereco" value={form.endereco} onChange={handleChange} placeholder="Endereço (opcional)" />
+        <input name="valor" value={form.valor} onChange={handleChange} placeholder="Valor (R$) - ex: 39.90" type="number" step="0.01" required />
+        <button type="submit" disabled={loading}>{loading ? "Gerando..." : "Gerar PIX"}</button>
       </form>
-
-      {status && <p>{status}</p>}
     </div>
   );
-};
-
-export default PaymentForm;
+}

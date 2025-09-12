@@ -221,11 +221,13 @@ export default function App() {
         <nav>
           <Link to="/">Home</Link>
           <Link to="/indicacoes">Indicações</Link>
+          <Link to="/pagamento">Pagamento</Link>
         </nav>
       </header>
       <Routes>
         <Route path="/" element={<HomeView />} />
         <Route path="/indicacoes" element={<IndicacoesViewWrapper />} />
+        <Route path="/pagamento" element={<PaymentForm />} />
       </Routes>
     </Router>
     

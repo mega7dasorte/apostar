@@ -128,12 +128,12 @@ button:disabled {
   margin: 1rem 0;
 }
 
-.grid-numeros button {
+/*.grid-numeros button {
   padding: 0.5rem;
   border: 1px solid #ccc;
   background: #f9fafb;
   border-radius: 6px;
-}
+}*/
 
 .grid-numeros button.numero-selecionado {
   background: #16a34a;
@@ -201,4 +201,34 @@ main form button {
 
 main div {
   margin: 0.5rem 0;
+}
+
+/* ===== BOTÕES ACESSÍVEIS ===== */
+.botao-confirmar {
+  background: #16a34a;
+  color: white;
+  font-size: 1.25rem;
+  font-weight: bold;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.botao-confirmar:hover {
+  background: #15803d;
+}
+
+.grid-numeros button {
+  font-size: 1.25rem;
+  min-height: 50px;
+}
+
+label, select, input {
+  font-size: 1.1rem;
+}
+
+main {
+  font-size: 1.2rem;
+  line-height: 1.6;
 }

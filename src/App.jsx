@@ -75,6 +75,10 @@ function HomeView() {
     return novo;
   });
 
+  const [mostrarPaymentForm, setMostrarPaymentForm] = useState(false);
+  const [paymentCreated, setPaymentCreated] = useState(null);
+  const [mostrarIndicacoesInline, setMostrarIndicacoesInline] = useState(false);
+
   const depoimentos = useMemo(() => depoimentosSeed.map((d, i) => ({ ...d, foto: rostos[i % rostos.length] })), []);
 
   // ticker de mensagens
@@ -112,6 +116,9 @@ function HomeView() {
     setPixTxid(txid);
     setPixPayload(payload);
     setSelecionados([]);
+
+    // NOVO: abrir o formulário de pagamento inline com o valor já preenchido
+    setMostrarPaymentForm(true);
   };
 
   const premioPrevisto = (totalArrecadado * premioPercentual) / 100;
@@ -165,10 +172,15 @@ function HomeView() {
 
         <p>Selecionados ({selecionados.length}/{qtdNumeros}): {selecionados.join(", ") || "nenhum"}</p>
 
-        <button onClick={confirmarAposta} disabled={!podeConfirmar}>Confirmar Aposta (fictícia)</button>
+        <button 
+          onClick={confirmarAposta} 
+          disabled={!podeConfirmar}
+          className="botao-confirmar"
+        >
+          ✅ Confirmar Aposta (fictícia)
+        </button>
       </section>
 
-      {/* PIX FICTÍCIO */}
       {pixPayload && (
         <section className="pix-container">
           <div>
@@ -177,6 +189,28 @@ function HomeView() {
             <p>TXID: {pixTxid}</p>
           </div>
           <QRCode value={pixPayload} size={196} />
+        </section>
+      )}
+
+      {/* AQUI: PaymentForm inline (abre automaticamente após confirmarAposta) */}
+      {mostrarPaymentForm && (
+        <section className="payment-inline">
+          <PaymentForm
+            totalCompra={totalCompra}
+            onSuccess={(paymentRecord) => {
+              // guardamos o pagamento criado e liberamos a seção de indicações inline
+              setPaymentCreated(paymentRecord);
+              setMostrarIndicacoesInline(true);
+            }}
+          />
+        </section>
+      )}
+
+      {/* Indicacoes inline (aparece automaticamente quando pagamento confirmado) */}
+      {mostrarIndicacoesInline && (
+        <section className="indicacoes-inline">
+          <h3>Indique seus amigos</h3>
+          <IndicacoesView refAtual={refAtual} />
         </section>
       )}
 
@@ -191,6 +225,8 @@ function HomeView() {
         ))}
       </section>
     </main>
+
+
   );
 }
 

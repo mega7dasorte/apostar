@@ -3,18 +3,18 @@ import React, { useState } from "react";
 import { createPayment } from "../services/payments";
 import PixGenerator from "./PixGenerator";
 
-export default function PaymentForm() {
+export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
     email: "",
     celular: "",
     endereco: "",
-    valor: "",
+    valor: totalCompra ? Number(totalCompra).toFixed(2) : "",
   });
-
   const [loading, setLoading] = useState(false);
   const [payment, setPayment] = useState(null);
+  const [error, setError] = useState(null);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,32 +22,43 @@ export default function PaymentForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    // validações mínimas
+    setError(null);
+
+    // validação mínima
     if (!form.nome || !form.cpf || !form.email || !form.celular || !form.valor) {
-      alert("Preencha todos os campos obrigatórios (nome, cpf, email, celular, valor).");
+      setError("Preencha todos os campos obrigatórios.");
       return;
     }
 
     setLoading(true);
     try {
-      const created = await createPayment(form); // insere no Supabase
+      // createPayment retorna o registro criado (do supabase)
+      const created = await createPayment({
+        nome: form.nome,
+        cpf: form.cpf,
+        email: form.email,
+        celular: form.celular,
+        endereco: form.endereco,
+        valor: Number(form.valor),
+      });
+
       setPayment(created);
-      // NÃO limpamos aqui para que o usuário veja os dados
+      onSuccess(created); // notifica o App.jsx
     } catch (err) {
-      console.error("Erro criar pagamento:", err);
-      alert("Erro ao criar pagamento. Veja console.");
+      console.error("Erro ao criar pagamento:", err);
+      setError("Erro ao processar pagamento. Veja o console.");
     } finally {
       setLoading(false);
     }
   }
 
-  // se já gerou pagamento, mostrar QR e dados
+  // após gerar, mostra QR + dados
   if (payment) {
     return (
-      <div>
-        <h2>Pagamento criado</h2>
-        <p>TXID: <strong>{payment.txid}</strong></p>
-        <p>Valor: <strong>{Number(payment.valor).toFixed(2)}</strong></p>
+      <div className="payment-result">
+        <h3>Pagamento registrado</h3>
+        <p><strong>TXID:</strong> {payment.txid}</p>
+        <p><strong>Valor:</strong> R$ {Number(payment.valor).toFixed(2)}</p>
         <PixGenerator chavePix="c8875076-656d-4a18-8094-c70c67dbb56c" txid={payment.txid} nome={payment.nome} valor={payment.valor} />
       </div>
     );
@@ -55,15 +66,18 @@ export default function PaymentForm() {
 
   return (
     <div className="payment-form">
-      <h2>Gerar PIX / Registrar pagamento</h2>
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 10, maxWidth: 520 }}>
+      <h3>Pagamento</h3>
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 8, maxWidth: 520 }}>
         <input name="nome" value={form.nome} onChange={handleChange} placeholder="Nome completo" required />
         <input name="cpf" value={form.cpf} onChange={handleChange} placeholder="CPF" required />
-        <input name="email" value={form.email} onChange={handleChange} placeholder="E-mail" required />
+        <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="E-mail" required />
         <input name="celular" value={form.celular} onChange={handleChange} placeholder="Celular" required />
         <input name="endereco" value={form.endereco} onChange={handleChange} placeholder="Endereço (opcional)" />
-        <input name="valor" value={form.valor} onChange={handleChange} placeholder="Valor (R$) - ex: 39.90" type="number" step="0.01" required />
-        <button type="submit" disabled={loading}>{loading ? "Gerando..." : "Gerar PIX"}</button>
+        <input name="valor" type="number" step="0.01" value={form.valor} onChange={handleChange} placeholder="Valor (R$)" required />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="submit" disabled={loading}>{loading ? "Gerando..." : "Gerar PIX e Registrar"}</button>
+        </div>
+        {error && <p style={{ color: "crimson" }}>{error}</p>}
       </form>
     </div>
   );

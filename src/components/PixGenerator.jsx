@@ -24,31 +24,32 @@ function crc16(payload) {
 
 /**
  * Gera um payload BR Code (EMV) básico para PIX dinâmico com txid.
- * Não substitui integração com PSP; é um payload compatível para testes.
+ * Só para testes; não substitui integração com PSP real.
  */
-export function gerarPixPayload({ chavePix, txid, nome, valor }) {
-  // campos básicos
-  const gui = tlv("00", "BR.GOV.BCB.PIX");                // GUI
-  const key = tlv("01", chavePix);                        // chave PIX
-  const merchantAccount = tlv("26", gui + key);          // tag 26 com subcampos
-  const merchantCategory = tlv("52", "0000");            // categoria (0000 padrão)
-  const currency = tlv("53", "986");                     // BRL (986)
+export function gerarPixPayload({ chavePix, txid, nome, valor, cidade = "SAOPAULO" }) {
+  const gui = tlv("00", "BR.GOV.BCB.PIX");
+  const key = tlv("01", chavePix);
+  const merchantAccount = tlv("26", gui + key);
+  const merchantCategory = tlv("52", "0000");
+  const currency = tlv("53", "986");
   const amount = valor ? tlv("54", Number(valor).toFixed(2)) : "";
   const country = tlv("58", "BR");
-  const merchantName = tlv("59", (nome || "NOME") .slice(0,25));
-  const merchantCity = tlv("60", "SAOPAULO"); // pode ajustar
-  const additional = tlv("62", tlv("05", txid)); // subtag 05 = txid
+  const merchantName = tlv("59", (nome || "NOME").slice(0, 25));
+  const merchantCity = tlv("60", cidade.toUpperCase());
+  const additional = tlv("62", tlv("05", txid)); // TXID como subtag 05
 
-  // montar sem CRC
-  const withoutCRC = tlv("00", "01") + merchantAccount + merchantCategory + currency + amount + country + merchantName + merchantCity + additional;
+  // montar payload sem CRC
+  const payloadSemCRC = tlv("00", "01") + merchantAccount + merchantCategory + currency + amount + country + merchantName + merchantCity + additional;
 
-  const payloadNoCRC = withoutCRC + "6304";
-  const crc = crc16(payloadNoCRC);
-  return payloadNoCRC + crc;
+  // adicionar placeholder do CRC e gerar CRC real
+  const payloadComCRC = payloadSemCRC + "6304";
+  const crc = crc16(payloadComCRC);
+
+  return payloadComCRC + crc;
 }
 
-export default function PixGenerator({ chavePix = "c8875076-656d-4a18-8094-c70c67dbb56c", txid, nome, valor }) {
-  const payload = gerarPixPayload({ chavePix, txid, nome, valor });
+export default function PixGenerator({ chavePix = "c8875076-656d-4a18-8094-c70c67dbb56c", txid, nome, valor, cidade }) {
+  const payload = gerarPixPayload({ chavePix, txid, nome, valor, cidade });
 
   return (
     <div className="pix-generator" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>

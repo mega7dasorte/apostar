@@ -1,7 +1,6 @@
 // src/components/PaymentForm.jsx
 import React, { useState } from "react";
 import { createPayment } from "../services/payments";
-import PixGenerator from "./PixGenerator";
 import QRCode from "react-qr-code";
 
 export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
@@ -34,7 +33,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
     setLoading(true);
     try {
       // 1️⃣ Cria pagamento no Supabase DB
-      const created = await createPayment({
+      const { data: created, error: dbError } = await createPayment({
         nome: form.nome,
         cpf: form.cpf,
         email: form.email,
@@ -42,11 +41,14 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
         endereco: form.endereco,
         valor: Number(form.valor),
       });
-      setPayment(created);
 
-      // 2️⃣ Cria preferência no Mercado Pago via Supabase Edge Function
+      if (dbError) throw new Error(dbError.message || "Erro no Supabase");
+
+      setPayment(created[0]);
+
+      // 2️⃣ Cria preferência no Mercado Pago via Edge Function
       const res = await fetch(
-        "https://rfvkadlbnztnbfwabhzj.supabase.co/functions/v1/rapid-worker",
+        `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/rapid-worker`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -55,9 +57,12 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
       );
 
       const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+
       setMpPayment(data);
 
-      onSuccess(created); // libera IndicacoesView
+      onSuccess(created[0]);
     } catch (err) {
       console.error("Erro ao processar pagamento:", err);
       setError("Erro ao processar pagamento. Veja o console.");
@@ -66,6 +71,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
     }
   }
 
+  // ✅ Tela de resultado com checkout do Mercado Pago
   if (payment && mpPayment && mpPayment.init_point) {
     return (
       <div className="payment-result">
@@ -73,15 +79,13 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
         <p><strong>TXID:</strong> {payment.txid}</p>
         <p><strong>Valor:</strong> R$ {Number(payment.valor).toFixed(2)}</p>
 
-        <PixGenerator
-          chavePix="c8875076-656d-4a18-8094-c70c67dbb56c"
-          txid={payment.txid}
-          nome={payment.nome}
-          valor={payment.valor}
-        />
-
         <div className="mercado-pago" style={{ marginTop: "1rem" }}>
-          <a href={mpPayment.init_point} target="_blank" rel="noopener noreferrer" style={{ display: "block", marginBottom: "1rem", fontWeight: "bold" }}>
+          <a
+            href={mpPayment.init_point}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "block", marginBottom: "1rem", fontWeight: "bold" }}
+          >
             Ir para Checkout Pro
           </a>
           <QRCode value={mpPayment.init_point} size={196} />
@@ -90,6 +94,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
     );
   }
 
+  // ✅ Formulário de pagamento
   return (
     <div className="payment-form">
       <h3>Pagamento</h3>
@@ -103,7 +108,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <button type="submit" disabled={loading}>
-            {loading ? "Gerando..." : "Gerar PIX e Checkout Pro"}
+            {loading ? "Gerando..." : "Ir para Checkout Pro"}
           </button>
         </div>
         {error && <p style={{ color: "crimson" }}>{error}</p>}

@@ -1,7 +1,7 @@
 import { supabase } from "../supabaseClient";
 
 // 🔑 Chave PIX fictícia (trocar depois pela real)
-const PIX_KEY = "chave-pix-ficticia@provedor.com";
+const PIX_KEY = "c8875076-656d-4a18-8094-c70c67dbb56c";
 
 export async function createPayment({ nome, cpf, email, celular, valor }) {
   const txid = crypto.randomUUID(); // ID único para a transação

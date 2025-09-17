@@ -66,36 +66,29 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
     }
   }
 
-  if (payment && mpPayment) {
-    return (
-      <div className="payment-result">
-        <h3>Pagamento registrado</h3>
-        <p><strong>TXID:</strong> {payment.txid}</p>
-        <p><strong>Valor:</strong> R$ {Number(payment.valor).toFixed(2)}</p>
+  if (payment && mpPayment && mpPayment.init_point) {
+  return (
+    <div className="payment-result">
+      <h3>Pagamento registrado</h3>
+      <p><strong>TXID:</strong> {payment.txid}</p>
+      <p><strong>Valor:</strong> R$ {Number(payment.valor).toFixed(2)}</p>
 
-        {/* Pix */}
-        <PixGenerator
-          chavePix="c8875076-656d-4a18-8094-c70c67dbb56c"
-          txid={payment.txid}
-          nome={payment.nome}
-          valor={payment.valor}
-        />
+      <PixGenerator
+        chavePix="c8875076-656d-4a18-8094-c70c67dbb56c"
+        txid={payment.txid}
+        nome={payment.nome}
+        valor={payment.valor}
+      />
 
-        {/* Checkout Pro + QR Code */}
-        <div className="mercado-pago" style={{ marginTop: "1rem" }}>
-          <a
-            href={mpPayment.init_point}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: "block", marginBottom: "1rem", fontWeight: "bold" }}
-          >
-            Ir para Checkout Pro
-          </a>
-          <QRCode value={mpPayment.init_point} size={196} />
-        </div>
+      <div className="mercado-pago" style={{ marginTop: "1rem" }}>
+        <a href={mpPayment.init_point} target="_blank" rel="noopener noreferrer" style={{ display: "block", marginBottom: "1rem", fontWeight: "bold" }}>
+          Ir para Checkout Pro
+        </a>
+        <QRCode value={mpPayment.init_point} size={196} />
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="payment-form">

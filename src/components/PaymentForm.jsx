@@ -52,7 +52,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ totalCompra: Number(form.valor) }),
+          body: JSON.stringify({ totalCompra: Number(form.valor), txid: created[0].txid }),
         }
       );
 

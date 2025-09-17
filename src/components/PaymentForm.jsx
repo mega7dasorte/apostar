@@ -86,7 +86,6 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
           </a>
           <QRCode value={mpPayment.init_point} size={196} />
         </div>
-      </div>
     );
   }
 

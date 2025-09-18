@@ -48,20 +48,34 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
 
       // 2️⃣ Cria preferência no Mercado Pago via Edge Function
       const res = await fetch(
-        `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/rapid-worker`,
+        `${SUPABASE_URL}/functions/v1/rapid-worker`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Prefer": "return=representation" // retorna o objeto inserido
+          },
           body: JSON.stringify({ totalCompra: Number(form.valor), txid: created[0].txid }),
         }
       );
 
-      const data = await res.json();
+      /*const data = await res.json();
 
       if (data.error) throw new Error(data.error);
 
       setMpPayment(data);
 
+      onSuccess(created[0]);*/
+      if (!res.ok) {
+        const errorText = await res.text(); // lê o texto da resposta (pode ser HTML)
+        throw new Error(`Erro no Supabase: ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      console.log("Pagamento criado:", data);
+      setMpPayment(data);
       onSuccess(created[0]);
     } catch (err) {
       console.error("Erro ao processar pagamento:", err);

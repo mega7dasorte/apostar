@@ -31,9 +31,9 @@ const rostos = Array.from({ length: 30 }, (_, i) => `https://i.pravatar.cc/300?i
 
 const depoimentosSeed = [
   { nome: "José, Curitiba", texto: "“Com esse prêmio, comprei minha casa própria. Foi surreal ver meu nome nas mensagens!”" },
-  { nome: "Fernanda, Recife", texto: "“Minha vida mudou para sempre. Agora sou milionária (no mundo da ficção)!”" },
-  { nome: "Maria, São Paulo", texto: "“Realizei meus sonhos com essa sorte imaginária. Uma experiência divertida!”" },
-  { nome: "Igor, Belo Horizonte", texto: "“Eu não acreditava até ver meu código Pix aparecer. Arte que brinca com expectativas.”" },
+  { nome: "Fernanda, Recife", texto: "“Minha vida mudou para sempre. Agora sou milionária!”" },
+  { nome: "Maria, São Paulo", texto: "“Realizei meus sonhos com essa sorte. Uma experiência divertida!”" },
+  { nome: "Igor, Belo Horizonte", texto: "“Eu não acreditava até ver meu código Pix aparecer.”" },
 ];
 
 const precosPorQuantidade = { 7: 39.9, 8: 56.0, 9: 63.0, 10: 70.0 };
@@ -177,7 +177,7 @@ function HomeView() {
           disabled={!podeConfirmar}
           className="botao-confirmar"
         >
-          ✅ Confirmar Aposta (fictícia)
+          ✅ Confirmar Aposta
         </button>
       </section>
 

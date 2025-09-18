@@ -181,7 +181,7 @@ function HomeView() {
         </button>
       </section>
 
-      {pixPayload && (
+      {/*pixPayload && (
         <section className="pix-container">
           <div>
             <h4>PIX (fictício)</h4>
@@ -190,7 +190,7 @@ function HomeView() {
           </div>
           <QRCode value={pixPayload} size={196} />
         </section>
-      )}
+      )*/}
 
       {/* AQUI: PaymentForm inline (abre automaticamente após confirmarAposta) */}
       {mostrarPaymentForm && (

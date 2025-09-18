@@ -60,7 +60,13 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
             "apikey": SUPABASE_ANON_KEY,
             "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
           },
-          body: JSON.stringify({ totalCompra: Number(form.valor), txid: created[0].txid }),
+          body: JSON.stringify({ 
+            totalCompra: Number(form.valor), 
+            txid: created[0].txid ,
+            email: form.email,
+            nome: form.nome,
+            cpf: form.cpf
+          }),
         }
       );
 
@@ -78,8 +84,14 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
 
       const data = await res.json();
       console.log("Pagamento criado:", data);
-      setMpPayment(data);
-      onSuccess(created[0]);
+      //setMpPayment(data);
+      //onSuccess(created[0]);
+      // 3️⃣ Redireciona automaticamente para o checkout do Mercado Pago
+      if (data.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        throw new Error("Não foi possível obter o link de pagamento.");
+      }
     } catch (err) {
       console.error("Erro ao processar pagamento:", err);
       setError("Erro ao processar pagamento. Veja o console.");
@@ -89,7 +101,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
   }
 
   // ✅ Tela de resultado com checkout do Mercado Pago
-  if (payment && mpPayment && mpPayment.init_point) {
+  /*if (payment && mpPayment && mpPayment.init_point) {
     return (
       <div className="payment-result">
         <h3>Pagamento registrado</h3>
@@ -109,7 +121,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
         </div>
       </div>
     );
-  }
+  }*/
 
   // ✅ Formulário de pagamento
   return (

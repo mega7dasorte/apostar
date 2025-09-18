@@ -58,8 +58,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
           headers: {
             "Content-Type": "application/json",
             "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Prefer": "return=representation" // retorna o objeto inserido
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
           },
           body: JSON.stringify({ totalCompra: Number(form.valor), txid: created[0].txid }),
         }

@@ -47,6 +47,9 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
 
       setPayment(created[0]);
 
+      console.log("SUPABASE_URL:", SUPABASE_URL);
+      console.log("SUPABASE_ANON_KEY:", SUPABASE_ANON_KEY ? "OK" : "NÃO DEFINIDO");
+
       // 2️⃣ Cria preferência no Mercado Pago via Edge Function
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/rapid-worker`,

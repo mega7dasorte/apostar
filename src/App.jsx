@@ -84,7 +84,7 @@ function HomeView() {
   // ticker de mensagens
   useEffect(() => {
     const intervalo = setInterval(() => {
-      setMensagem(`${getRandomItem(nomesBR)} acabou de ganhar R$ 500 mil (ficção).`);
+      setMensagem(`${getRandomItem(nomesBR)} acabou de ganhar R$ 500 mil. Mais um milionário(a)`);
       setMensagemFoto(getRandomItem(rostos));
     }, 3000);
     return () => clearInterval(intervalo);

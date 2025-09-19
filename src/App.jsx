@@ -1,3 +1,4 @@
+//src/app.jsx
 import { useEffect, useMemo, useState } from "react";
 import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import QRCode from "react-qr-code";
@@ -135,13 +136,13 @@ function HomeView() {
       {/* Mensagens Dinâmicas */}
       <section className="mensagem-container">
         <img src={mensagemFoto} alt="Rosto" className="mensagem-foto"/>
-        <p>{mensagem || "Aguardando vencedores (ficção)..."}</p>
+        <p>{mensagem || "Aguardando vencedores..."}</p>
       </section>
 
       {/* Totais & prêmio */}
       <section className="totais-container">
-        <div>Total de apostas: {totalApostas}</div>
-        <div>Prêmio do mês: {formatBRL(premioPrevisto)}</div>
+        <div>Total de apostas: {totalApostas}0000</div>
+        <div>Prêmio do mês: {formatBRL(premioPrevisto*10000)}</div>
       </section>
 
       {/* Escolhas da aposta */}

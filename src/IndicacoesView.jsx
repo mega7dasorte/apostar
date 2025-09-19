@@ -1,3 +1,4 @@
+//src/indicacoesView.jsx
 import { useEffect, useState } from "react";
 
 const LS_INDICACOES = "sf_indicacoes";

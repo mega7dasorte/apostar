@@ -142,7 +142,7 @@ function HomeView() {
       {/* Totais & prêmio */}
       <section className="totais-container">
         <div>Total de apostas: {totalApostas}0000</div>
-        <div>Prêmio do mês: {formatBRL(premioPrevisto*10000)}</div>
+        <div>Prêmio do mês: {formatBRL(premioPrevisto*1000)}</div>
       </section>
 
       {/* Escolhas da aposta */}

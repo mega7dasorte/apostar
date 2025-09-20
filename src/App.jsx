@@ -125,29 +125,30 @@ function HomeView() {
   const premioPrevisto = (totalArrecadado * premioPercentual) / 100;
 
   return (
-    <main>
-      {/* Hero */}
+    <main className="container">
+      {/* HERO */}
       <section className="hero">
-        <h2>Escolha seus números e participe</h2>
-        <p>Prêmios de até <strong>R$ 500.000</strong>. Com transações reais, na hora sem burocacia.</p>
-        <p className="text-xs">Este site é uma obra artística/experimental. Nada aqui é um produto financeiro ou aposta real.</p>
+        <h2 className="hero-title">Escolha seus números e participe</h2>
+        <p className="hero-subtitle">Prêmios de até <strong>R$ 500.000,00</strong>. Com transações reais, na hora sem burocracia.</p>
+        <p className="text-xs disclaimer">
+
+        </p>
       </section>
 
-      {/* Mensagens Dinâmicas */}
-      <section className="mensagem-container">
-        <img src={mensagemFoto} alt="Rosto" className="mensagem-foto"/>
+      {/* MENSAGENS */}
+      <section className="mensagem-container shadow">
         <p>{mensagem || "Aguardando vencedores..."}</p>
       </section>
 
-      {/* Totais & prêmio */}
+      {/* TOTAIS */}
       <section className="totais-container">
-        <div>Total de apostas: {totalApostas}0000</div>
-        <div>Prêmio do mês: {formatBRL(premioPrevisto*1000)}</div>
+        <div><strong>Total de apostas:</strong> {totalApostas}0000</div>
+        <div><strong>Prêmio do mês:</strong> {formatBRL(premioPrevisto * 1000)}</div>
       </section>
 
-      {/* Escolhas da aposta */}
+      {/* APOSTAS */}
       <section className="aposta-container">
-        <div>
+        <div className="aposta-opcoes">
           <label>Quantidade de números</label>
           <select value={qtdNumeros} onChange={(e) => { setQtdNumeros(Number(e.target.value)); setSelecionados([]); }}>
             <option value={7}>7 números — {formatBRL(precosPorQuantidade[7])}</option>
@@ -157,57 +158,33 @@ function HomeView() {
           </select>
         </div>
 
-        <div>
+        <div className="aposta-opcoes">
           <label>Quantidade de apostas</label>
           <input type="number" min={1} max={1000} value={qtdApostas} onChange={(e) => setQtdApostas(Math.min(1000, Math.max(1, Number(e.target.value) || 1)))} />
         </div>
 
-        <div>Total desta compra: {formatBRL(totalCompra)}</div>
+        <div className="aposta-total">Total desta compra: {formatBRL(totalCompra)}</div>
 
-        {/* Grid de números */}
         <div className="grid-numeros">
           {Array.from({ length: 70 }, (_, i) => i + 1).map((n) => (
             <button key={n} onClick={() => toggleNumero(n)} className={selecionados.includes(n) ? "numero-selecionado" : ""}>{n}</button>
           ))}
         </div>
 
-        <p>Selecionados ({selecionados.length}/{qtdNumeros}): {selecionados.join(", ") || "nenhum"}</p>
+        <p className="selecionados-info">Selecionados ({selecionados.length}/{qtdNumeros}): {selecionados.join(", ") || "nenhum"}</p>
 
-        <button 
-          onClick={confirmarAposta} 
-          disabled={!podeConfirmar}
-          className="botao-confirmar"
-        >
-          ✅ Confirmar Aposta
-        </button>
+        <button onClick={confirmarAposta} disabled={!podeConfirmar} className="botao-confirmar">✅ Confirmar Aposta</button>
       </section>
 
-      {/*pixPayload && (
-        <section className="pix-container">
-          <div>
-            <h4>PIX (fictício)</h4>
-            <p>{pixPayload}</p>
-            <p>TXID: {pixTxid}</p>
-          </div>
-          <QRCode value={pixPayload} size={196} />
-        </section>
-      )*/}
-
-      {/* AQUI: PaymentForm inline (abre automaticamente após confirmarAposta) */}
       {mostrarPaymentForm && (
         <section className="payment-inline">
-          <PaymentForm
-            totalCompra={totalCompra}
-            onSuccess={(paymentRecord) => {
-              // guardamos o pagamento criado e liberamos a seção de indicações inline
-              setPaymentCreated(paymentRecord);
-              setMostrarIndicacoesInline(true);
-            }}
-          />
+          <PaymentForm totalCompra={totalCompra} onSuccess={(paymentRecord) => {
+            setPaymentCreated(paymentRecord);
+            setMostrarIndicacoesInline(true);
+          }} />
         </section>
       )}
 
-      {/* Indicacoes inline (aparece automaticamente quando pagamento confirmado) */}
       {mostrarIndicacoesInline && (
         <section className="indicacoes-inline">
           <h3>Indique seus amigos</h3>
@@ -215,11 +192,9 @@ function HomeView() {
         </section>
       )}
 
-      {/* Depoimentos */}
       <section className="depoimentos-container">
         {depoimentos.map((d, idx) => (
-          <div key={idx}>
-            <img src={d.foto} alt={d.nome}/>
+          <div key={idx} className="depoimento shadow">
             <p>{d.texto}</p>
             <p>– {d.nome}</p>
           </div>
@@ -254,8 +229,8 @@ export default function App() {
   return (
     <Router>
       <header className="header">
-        <h1>Sorteio</h1>
-        <nav>
+        <h1 className="logo">Sorteio</h1>
+        <nav className="nav">
           <Link to="/">Home</Link>
           <Link to="/indicacoes">Indicações</Link>
           <Link to="/pagamento">Pagamento</Link>

@@ -35,10 +35,10 @@ export default function IndicacoesView({ refAtual }) {
   }
 
   const ranking = Object.entries(lista).sort((a,b) => b[1]-a[1]).slice(0,10);
-  const linkCompartilhar = `${window.location.origin}/#/indicacoes?ref=${refAtual.codigo}`;
+  const linkCompartilhar = `https://mega7dasorte.github.io/#/indicacoes?ref=${refAtual.codigo}`;
 
   return (
-    <main>
+    <main className="indicacoes-view">
       <h2>Convide seus amigos</h2>
       <p>Quanto mais pessoas você indicar, mais chances terá de ganhar no final do mês.</p>
 
@@ -48,7 +48,7 @@ export default function IndicacoesView({ refAtual }) {
       </div>
 
       <div>
-        <span>Link de indicação: {linkCompartilhar}</span>
+        <span>Link de indicação: {linkCompartilhar}</span>  
         <button onClick={() => navigator.clipboard.writeText(linkCompartilhar)}>Copiar link</button>
       </div>
 

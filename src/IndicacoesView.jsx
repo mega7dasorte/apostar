@@ -1,5 +1,6 @@
 //src/indicacoesView.jsx
 import { useEffect, useState } from "react";
+import { registrarIndicacao, contarIndicacoes } from './services/referralService';
 
 const LS_INDICACOES = "sf_indicacoes";
 
@@ -8,6 +9,12 @@ export default function IndicacoesView({ refAtual }) {
     const raw = localStorage.getItem(LS_INDICACOES);
     return raw ? JSON.parse(raw) : {};
   });
+
+  async function handleRegistrar() {
+    await registrarIndicacao(referrerId, referredId);
+    const total = await contarIndicacoes(referrerId);
+    setTotalIndicacoes(total);
+  }
 
   useEffect(() => {
     if (refAtual && !lista[refAtual.codigo]) {

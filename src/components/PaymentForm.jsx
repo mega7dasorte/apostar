@@ -1,7 +1,8 @@
 // src/components/PaymentForm.jsx
 import React, { useState } from "react";
 import { createPayment } from "../services/payments";
-import QRCode from "react-qr-code";
+import { registrarAposta } from "../services/betsService";
+//import { enviarEmailApostador } from "../services/emailService";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../supabaseClient";
 
 export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
@@ -14,8 +15,6 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
     valor: totalCompra ? Number(totalCompra).toFixed(2) : "",
   });
   const [loading, setLoading] = useState(false);
-  const [payment, setPayment] = useState(null);
-  const [mpPayment, setMpPayment] = useState(null);
   const [error, setError] = useState(null);
 
   function handleChange(e) {
@@ -45,53 +44,60 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
 
       if (dbError) throw new Error(dbError.message || "Erro no Supabase");
 
-      setPayment(created[0]);
-
-      console.log("SUPABASE_URL:", SUPABASE_URL);
-      console.log("SUPABASE_ANON_KEY:", SUPABASE_ANON_KEY ? "OK" : "NÃO DEFINIDO");
+      const payment = created[0];
 
       // 2️⃣ Cria preferência no Mercado Pago via Edge Function
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/rapid-worker`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({ 
-            totalCompra: Number(form.valor), 
-            txid: created[0].txid ,
-            email: form.email,
-            nome: form.nome,
-            cpf: form.cpf
-          }),
-        }
-      );
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/rapid-worker`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ 
+          totalCompra: Number(form.valor), 
+          txid: payment.txid,
+          email: form.email,
+          nome: form.nome,
+          cpf: form.cpf
+        }),
+      });
 
-      /*const data = await res.json();
-
-      if (data.error) throw new Error(data.error);
-
-      setMpPayment(data);
-
-      onSuccess(created[0]);*/
       if (!res.ok) {
-        const errorText = await res.text(); // lê o texto da resposta (pode ser HTML)
+        const errorText = await res.text();
         throw new Error(`Erro no Supabase: ${res.status} - ${errorText}`);
       }
 
       const data = await res.json();
-      console.log("Pagamento criado:", data);
-      //setMpPayment(data);
-      //onSuccess(created[0]);
-      // 3️⃣ Redireciona automaticamente para o checkout do Mercado Pago
-      if (data.init_point) {
-        window.location.href = data.init_point;
-      } else {
-        throw new Error("Não foi possível obter o link de pagamento.");
-      }
+      if (!data.init_point) throw new Error("Não foi possível obter o link de pagamento.");
+
+      // 3️⃣ Registro da aposta na tabela bets (status pending)
+      await registrarAposta({
+        user_id: payment.id, // ou ID do usuário real se houver
+        numeros: [], // preencher com números selecionados
+        quantity_numbers: 6, // ajustar conforme regra do jogo
+        qty_tickets: 1,
+        unit_price: Number(form.valor),
+        total_price: Number(form.valor),
+        status: "pending",
+        pix_txid: payment.txid,
+        month_year: new Date().toISOString().slice(0,7)
+      });
+
+      // 4️⃣ Envio de e-mail de confirmação ao apostador
+      /*await enviarEmailApostador({
+        nome: form.nome,
+        email: form.email,
+        txid: payment.txid,
+        valor: Number(form.valor),
+      });*/
+
+      // 5️⃣ Redireciona automaticamente para checkout Mercado Pago
+      window.location.href = data.init_point;
+
+      // 6️⃣ Callback de sucesso
+      onSuccess(payment);
+
     } catch (err) {
       console.error("Erro ao processar pagamento:", err);
       setError("Erro ao processar pagamento. Veja o console.");
@@ -100,30 +106,6 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
     }
   }
 
-  // ✅ Tela de resultado com checkout do Mercado Pago
-  /*if (payment && mpPayment && mpPayment.init_point) {
-    return (
-      <div className="payment-result">
-        <h3>Pagamento registrado</h3>
-        <p><strong>TXID:</strong> {payment.txid}</p>
-        <p><strong>Valor:</strong> R$ {Number(payment.valor).toFixed(2)}</p>
-
-        <div className="mercado-pago" style={{ marginTop: "1rem" }}>
-          <a
-            href={mpPayment.init_point}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: "block", marginBottom: "1rem", fontWeight: "bold" }}
-          >
-            Ir para Checkout Pro
-          </a>
-          <QRCode value={mpPayment.init_point} size={196} />
-        </div>
-      </div>
-    );
-  }*/
-
-  // ✅ Formulário de pagamento
   return (
     <div className="payment-form">
       <h3>Pagamento</h3>
@@ -137,7 +119,7 @@ export default function PaymentForm({ totalCompra = 0, onSuccess = () => {} }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <button type="submit" disabled={loading}>
-            {loading ? "Gerando..." : "Ir para Checkout Pro"}
+            {loading ? "Gerando..." : "Efetuar pagamento"}
           </button>
         </div>
         {error && <p style={{ color: "crimson" }}>{error}</p>}

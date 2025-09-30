@@ -37,7 +37,7 @@ const depoimentosSeed = [
   { nome: "Igor, Belo Horizonte", texto: "“Eu não acreditava até ver meu código Pix aparecer.”" },
 ];
 
-const precosPorQuantidade = { 7: 39.9, 8: 56.0, 9: 63.0, 10: 70.0 };
+const precosPorQuantidade = {1:1.0, 7: 39.9, 8: 56.0, 9: 63.0, 10: 70.0 };
 const opcoesPremio = [20, 30, 40];
 
 const LS_TOTAL_APOSTAS = "sf_total_apostas";
@@ -151,6 +151,7 @@ function HomeView() {
         <div className="aposta-opcoes">
           <label>Quantidade de números</label>
           <select value={qtdNumeros} onChange={(e) => { setQtdNumeros(Number(e.target.value)); setSelecionados([]); }}>
+            <option value={7}>7 números — {formatBRL(precosPorQuantidade[1])}</option>
             <option value={7}>7 números — {formatBRL(precosPorQuantidade[7])}</option>
             <option value={8}>8 números — {formatBRL(precosPorQuantidade[8])}</option>
             <option value={9}>9 números — {formatBRL(precosPorQuantidade[9])}</option>

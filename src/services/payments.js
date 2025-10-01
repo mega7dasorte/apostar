@@ -15,7 +15,6 @@ export async function createPayment({ nome, cpf, email, celular, valor, numeros 
         email,
         celular,
         valor,
-        numeros,   // 👈 salva junto
         txid,
         status: "pendente",
       },

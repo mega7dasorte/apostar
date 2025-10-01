@@ -1,48 +1,48 @@
-//src/indicacoesView.jsx
+// src/IndicacoesView.jsx
 import { useEffect, useState } from "react";
-import { registrarIndicacao, contarIndicacoes } from './services/referralService';
+import { contarIndicacoesValidas, generateReferralCode } from "./services/referralService";
 
-const LS_INDICACOES = "sf_indicacoes";
+export default function IndicacoesView({ userId }) {
+  const [codigo, setCodigo] = useState("");
+  const [totalIndicacoes, setTotalIndicacoes] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-export default function IndicacoesView({ refAtual }) {
-  const [lista, setLista] = useState(() => {
-    const raw = localStorage.getItem(LS_INDICACOES);
-    return raw ? JSON.parse(raw) : {};
-  });
-
-  async function handleRegistrar() {
-    await registrarIndicacao(referrerId, referredId);
-    const total = await contarIndicacoes(referrerId);
-    setTotalIndicacoes(total);
-  }
-
+  // 1️⃣ Gera ou busca código de indicação do usuário
   useEffect(() => {
-    if (refAtual && !lista[refAtual.codigo]) {
-      const novo = { ...lista, [refAtual.codigo]: 0 };
-      setLista(novo);
-      localStorage.setItem(LS_INDICACOES, JSON.stringify(novo));
+    async function fetchCodigo() {
+      if (!userId) return;
+      try {
+        const code = await generateReferralCode(userId);
+        setCodigo(code);
+      } catch (err) {
+        console.error("Erro ao buscar código de indicação:", err);
+      }
     }
-  }, [refAtual]);
+    fetchCodigo();
+  }, [userId]);
 
-  const [novoEmail, setNovoEmail] = useState("");
+  // 2️⃣ Conta indicações válidas (pagas)
+  useEffect(() => {
+    async function fetchIndicacoes() {
+      if (!userId) return;
+      try {
+        setLoading(true);
+        const total = await contarIndicacoesValidas(userId);
+        setTotalIndicacoes(total);
+      } catch (err) {
+        console.error("Erro ao contar indicações:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchIndicacoes();
+  }, [userId]);
 
-  const registrarIndicacao = (e) => {
-    e.preventDefault();
-    if (!refAtual) return;
-    const email = (novoEmail || "").trim().toLowerCase();
-    if (!email || !email.includes("@")) return;
-    const updated = { ...lista, [refAtual.codigo]: (lista[refAtual.codigo] || 0) + 1 };
-    setLista(updated);
-    localStorage.setItem(LS_INDICACOES, JSON.stringify(updated));
-    setNovoEmail("");
-  };
-
-  if (!refAtual) {
-    return <p>Carregando indicações...</p>;
+  if (!userId) {
+    return <p>Carregando usuário...</p>;
   }
 
-  const ranking = Object.entries(lista).sort((a,b) => b[1]-a[1]).slice(0,10);
-  const linkCompartilhar = `https://mega7dasorte.github.io/#/indicacoes?ref=${refAtual.codigo}`;
+  const linkCompartilhar = `https://mega7dasorte.github.io/#/indicacoes?ref=${codigo}`;
 
   return (
     <main className="indicacoes-view">
@@ -50,27 +50,21 @@ export default function IndicacoesView({ refAtual }) {
       <p>Quanto mais pessoas você indicar, mais chances terá de ganhar no final do mês.</p>
 
       <div>
-        <span>Código: {refAtual.codigo}</span>
-        <button onClick={() => navigator.clipboard.writeText(refAtual.codigo)}>Copiar código</button>
+        <span><strong>Código:</strong> {codigo}</span>
+        <button onClick={() => navigator.clipboard.writeText(codigo)}>Copiar código</button>
       </div>
 
       <div>
-        <span>Link de indicação: {linkCompartilhar}</span>  
+        <span><strong>Link de indicação:</strong> {linkCompartilhar}</span>
         <button onClick={() => navigator.clipboard.writeText(linkCompartilhar)}>Copiar link</button>
       </div>
 
-      <form onSubmit={registrarIndicacao}>
-        <input type="email" placeholder="email do amigo" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} />
-        <button>Adicionar</button>
-      </form>
-
-      <h3>Ranking (top 10)</h3>
-      {ranking.map(([codigo,pontos], i) => (
-        <div key={codigo}>
-          <span>{i+1}. {codigo}</span>
-          <span>{pontos} indicações</span>
-        </div>
-      ))}
+      <h3>Suas indicações válidas</h3>
+      {loading ? (
+        <p>Carregando...</p>
+      ) : (
+        <p>Você já possui <strong>{totalIndicacoes}</strong> indicações confirmadas 🎉</p>
+      )}
     </main>
   );
 }

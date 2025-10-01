@@ -105,23 +105,7 @@ function HomeView() {
   };
 
   const podeConfirmar = selecionados.length === qtdNumeros && precoUnitario && qtdApostas >= 1 && qtdApostas <= 1000;
-  const confirmarAposta = () => {
-    if (!podeConfirmar) return;
-    setTotalApostas((t) => t + qtdApostas);
-    setTotalArrecadado((v) => v + totalCompra);
-    if (qtdNumeros >= 9) setLiberouIndicacoes(true);
-
-    const txid = randomUUID().slice(0, 25);
-    const chave = "c8875076-656d-4a18-8094-c70c67dbb56c";
-    const descricao = `APOSTA-${qtdNumeros}N-${qtdApostas}X`;
-    const payload = `PIX-FICTICIO|BANK:pagBank|CHAVE:${chave}|TXID:${txid}|DESC:${descricao}|VLR:${totalCompra.toFixed(2)}`;
-    setPixTxid(txid);
-    setPixPayload(payload);
-    setSelecionados([]);
-
-    // NOVO: abrir o formulário de pagamento inline com o valor já preenchido
-    setMostrarPaymentForm(true);
-  };
+  
 
   const premioPrevisto = (totalArrecadado * premioPercentual) / 100;
 
@@ -203,7 +187,10 @@ function HomeView() {
           ))}
         </div>
 
-        <p className="selecionados-info">Selecionados ({selecionados.length}/{qtdNumeros}): {selecionados.join(", ") || "nenhum"}</p>
+        <p className="selecionados-info">
+          Selecionados ({numerosConfirmados.length > 0 ? numerosConfirmados.length : selecionados.length}/{qtdNumeros}):{" "}
+          {(numerosConfirmados.length > 0 ? numerosConfirmados : selecionados).join(", ") || "nenhum"}
+        </p>
 
         <button onClick={confirmarAposta} disabled={!podeConfirmar} className="botao-confirmar">✅ Confirmar Aposta</button>
       </section>

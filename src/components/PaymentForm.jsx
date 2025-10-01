@@ -83,7 +83,6 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
       // 3️⃣ Registro da aposta com os números escolhidos
       await registrarAposta({
         user_id: payment.id, // ou ID do usuário real se houver
-        numeros: selectedNumbers, // agora salva os números escolhidos
         quantity_numbers: selectedNumbers.length,
         qty_tickets: 1,
         unit_price: Number(form.valor),

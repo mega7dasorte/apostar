@@ -30,3 +30,7 @@ export async function generateReferralCode(user_id) {
   if (error) throw error;
   return data.referral_code;
 }
+
+function calcularIndicacoesValidas(userId) {
+  return referrals.filter(r => r.referrer_user_id === userId && r.is_valid).length;
+}

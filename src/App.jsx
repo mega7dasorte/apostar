@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import QRCode from "react-qr-code";
 import IndicacoesView from "./IndicacoesView";
+import Dashboard from "./Dashboard";
 import PaymentForm from "./components/PaymentForm";
 import React from "react";
 
@@ -230,17 +231,18 @@ export default function App() {
   return (
     <Router>
       <header className="header">
-        <h1 className="logo">Sorteio</h1>
+        <h1 className="logo">Mega da sorte POVÃO</h1>
         <nav className="nav">
           <Link to="/">Home</Link>
           <Link to="/indicacoes">Indicações</Link>
-          <Link to="/pagamento">Pagamento</Link>
+          <Link to="/pagamento">Depósito</Link>
         </nav>
       </header>
       <Routes>
         <Route path="/" element={<HomeView />} />
         <Route path="/indicacoes" element={<IndicacoesViewWrapper />} />
         <Route path="/pagamento" element={<PaymentForm />} />
+        <Route path="/dashboard" element={<PaymentForm />} />
       </Routes>
     </Router>
     

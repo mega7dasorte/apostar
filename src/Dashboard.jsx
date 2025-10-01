@@ -1,99 +1,118 @@
-// src/Dashboard.jsx
+// src/components/Dashboard.jsx
 import React, { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from "./supabaseClient";
 
 export default function Dashboard() {
+  const [payments, setPayments] = useState([]);
+  const [referrals, setReferrals] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [aggregates, setAggregates] = useState({ total_tickets: 0, total_amount: 0 });
-  const [recentBets, setRecentBets] = useState([]);
-  const [error, setError] = useState(null);
-
-  const month_year = new Date().toISOString().slice(0,7); // YYYY-MM
 
   useEffect(() => {
-    async function fetchDashboard() {
-      try {
-        // 1️⃣ Busca agregados do mês atual
-        const { data: aggData, error: aggError } = await supabase
-          .from("aggregates")
-          .select("*")
-          .eq("month_year", month_year)
-          .single();
+    async function fetchData() {
+      setLoading(true);
 
-        if (aggError && aggError.code !== "PGRST116") throw new Error(aggError.message);
+      // 1️⃣ Puxa pagamentos
+      const { data: payData, error: payError } = await supabase
+        .from("payments")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-        setAggregates(aggData || { total_tickets: 0, total_amount: 0 });
+      if (payError) console.error("Erro ao carregar pagamentos:", payError);
+      else setPayments(payData || []);
 
-        // 2️⃣ Busca últimas apostas pagas
-        const { data: betsData, error: betsError } = await supabase
-          .from("bets")
-          .select("*")
-          .eq("month_year", month_year)
-          .eq("status", "paid")
-          .order("created_at", { ascending: false })
-          .limit(10);
+      // 2️⃣ Puxa referrals
+      const { data: refData, error: refError } = await supabase
+        .from("referrals")
+        .select("*");
 
-        if (betsError) throw new Error(betsError.message);
+      if (refError) console.error("Erro ao carregar referrals:", refError);
+      else setReferrals(refData || []);
 
-        setRecentBets(betsData);
+      // 3️⃣ Puxa usuários
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("id, nome, referral_code");
 
-      } catch (err) {
-        console.error("Erro ao carregar dashboard:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+      if (userError) console.error("Erro ao carregar usuários:", userError);
+      else setUsers(userData || []);
+
+      setLoading(false);
     }
 
-    fetchDashboard();
-  }, [month_year]);
+    fetchData();
+  }, []);
+
+  // 4️⃣ Calcula indicações válidas (só conta se o referido tiver pagamento "pago")
+  function calcularIndicacoesValidas(userId) {
+    const indicacoes = referrals.filter(r => r.referrer_user_id === userId);
+    let validas = 0;
+
+    indicacoes.forEach(indicacao => {
+      const pagou = payments.find(
+        p =>
+          p.user_id === indicacao.referred_user_id &&
+          p.status === "pago"
+      );
+      if (pagou) validas++;
+    });
+
+    return validas;
+  }
 
   if (loading) return <p>Carregando dashboard...</p>;
-  if (error) return <p style={{ color: "crimson" }}>Erro: {error}</p>;
 
   return (
-    <main style={{ maxWidth: 800, margin: "2rem auto", padding: "1rem" }}>
-      <h2>Dashboard - {month_year}</h2>
-      
-      <div style={{ display: "flex", gap: "2rem", marginBottom: "2rem" }}>
-        <div style={{ flex: 1, padding: "1rem", background: "#ffffff", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-          <h3>Total de Apostas Pagas</h3>
-          <p style={{ fontSize: "2rem", fontWeight: "bold" }}>{aggregates.total_tickets}</p>
-        </div>
-        <div style={{ flex: 1, padding: "1rem", background: "#ffffff", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-          <h3>Prêmio Acumulado (R$)</h3>
-          <p style={{ fontSize: "2rem", fontWeight: "bold" }}>{aggregates.total_amount?.toFixed(2)}</p>
-        </div>
-      </div>
+    <div style={{ padding: 20 }}>
+      <h2>📊 Dashboard Administrativo</h2>
 
-      <div style={{ background: "#ffffff", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", padding: "1rem" }}>
-        <h3>Últimas Apostas Pagas</h3>
-        {recentBets.length === 0 ? (
-          <p>Nenhuma aposta registrada ainda.</p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: "0.5rem", borderBottom: "1px solid #ccc" }}>Usuário</th>
-                <th style={{ textAlign: "left", padding: "0.5rem", borderBottom: "1px solid #ccc" }}>Números</th>
-                <th style={{ textAlign: "right", padding: "0.5rem", borderBottom: "1px solid #ccc" }}>Valor (R$)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentBets.map(bet => (
-                <tr key={bet.id}>
-                  <td style={{ padding: "0.5rem" }}>{bet.user_id}</td>
-                  <td style={{ padding: "0.5rem" }}>{bet.numeros.join(", ")}</td>
-                  <td style={{ padding: "0.5rem", textAlign: "right" }}>{bet.total_price.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </main>
+      {/* Seção de Pagamentos */}
+      <h3>Pagamentos</h3>
+      <table border="1" cellPadding="8" style={{ marginBottom: 30 }}>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Email</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          {payments.map((p) => (
+            <tr key={p.txid}>
+              <td>{p.nome}</td>
+              <td>{p.cpf}</td>
+              <td>{p.email}</td>
+              <td>R$ {Number(p.valor).toFixed(2)}</td>
+              <td>{p.status}</td>
+              <td>{new Date(p.created_at).toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Seção de Ranking de Indicações */}
+      <h3>🏆 Ranking de Indicações Válidas</h3>
+      <table border="1" cellPadding="8">
+        <thead>
+          <tr>
+            <th>Usuário</th>
+            <th>Código de Indicação</th>
+            <th>Indicações Válidas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((u) => (
+            <tr key={u.id}>
+              <td>{u.nome}</td>
+              <td>{u.referral_code || "—"}</td>
+              <td>{calcularIndicacoesValidas(u.id)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -38,7 +38,7 @@ const depoimentosSeed = [
   { nome: "Igor, Belo Horizonte", texto: "“Eu não acreditava até ver meu código Pix aparecer.”" },
 ];
 
-const precosPorQuantidade = {1:1.0, 7: 39.9, 8: 56.0, 9: 63.0, 10: 70.0 };
+const precosPorQuantidade = {3:5.0, 7: 39.9, 8: 56.0, 9: 63.0, 10: 70.0 };
 const opcoesPremio = [20, 30, 40];
 
 const LS_TOTAL_APOSTAS = "sf_total_apostas";
@@ -125,6 +125,36 @@ function HomeView() {
 
   const premioPrevisto = (totalArrecadado * premioPercentual) / 100;
 
+
+  const [numerosConfirmados, setNumerosConfirmados] = useState([]);
+  const formRef = useRef(null);
+
+  const confirmarAposta = () => {
+    if (!podeConfirmar) return;
+
+    setTotalApostas((t) => t + qtdApostas);
+    setTotalArrecadado((v) => v + totalCompra);
+    if (qtdNumeros >= 9) setLiberouIndicacoes(true);
+
+    const txid = randomUUID().slice(0, 25);
+    const chave = "c8875076-656d-4a18-8094-c70c67dbb56c";
+    const descricao = `APOSTA-${qtdNumeros}N-${qtdApostas}X`;
+    const payload = `PIX-FICTICIO|BANK:pagBank|CHAVE:${chave}|TXID:${txid}|DESC:${descricao}|VLR:${totalCompra.toFixed(2)}`;
+    setPixTxid(txid);
+    setPixPayload(payload);
+
+    // 🚀 Não limpamos mais os números antes de mostrar o form
+    setNumerosConfirmados([...selecionados]);
+
+    setMostrarPaymentForm(true);
+
+    // scroll automático para o form
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+
   return (
     <main className="container">
       {/* HERO */}
@@ -152,7 +182,7 @@ function HomeView() {
         <div className="aposta-opcoes">
           <label>Quantidade de números</label>
           <select value={qtdNumeros} onChange={(e) => { setQtdNumeros(Number(e.target.value)); setSelecionados([]); }}>
-            <option value={7}>7 números — {formatBRL(precosPorQuantidade[1])}</option>
+            <option value={7}>3 números — {formatBRL(precosPorQuantidade[1])}</option>
             <option value={7}>7 números — {formatBRL(precosPorQuantidade[7])}</option>
             <option value={8}>8 números — {formatBRL(precosPorQuantidade[8])}</option>
             <option value={9}>9 números — {formatBRL(precosPorQuantidade[9])}</option>
@@ -191,6 +221,28 @@ function HomeView() {
         <section className="indicacoes-inline">
           <h3>Indique seus amigos</h3>
           <IndicacoesView refAtual={refAtual} />
+        </section>
+      )}
+
+      {/* exibir números confirmados */}
+      {numerosConfirmados.length > 0 && (
+        <div className="selected-box">
+          <h3>🎯 Seus números confirmados:</h3>
+          <p>{numerosConfirmados.join(", ")}</p>
+        </div>
+      )}
+
+      {mostrarPaymentForm && (
+        <section ref={formRef} className="payment-inline">
+          <PaymentForm
+            totalCompra={totalCompra}
+            numerosSelecionados={numerosConfirmados}   // 👈 passando para o backend
+            onSuccess={(paymentRecord) => {
+              setPaymentCreated(paymentRecord);
+              setMostrarIndicacoesInline(true);
+              setSelecionados([]); // limpa só depois que pagou
+            }}
+          />
         </section>
       )}
 

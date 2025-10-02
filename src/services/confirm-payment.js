@@ -1,3 +1,4 @@
+// functions/confirm-payment/index.js
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 console.info("Confirm Payment Function Started");
@@ -6,6 +7,7 @@ const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
 
 async function sendEmail(email, nome, numeros, total) {
   if (!SENDGRID_API_KEY) throw new Error("SendGrid API key não configurada.");
+
   const body = {
     personalizations: [{ to: [{ email }] }],
     from: { email: "mega7dasorte@gmail.com", name: "Mega7 da Sorte" },
@@ -19,6 +21,7 @@ Valor: R$${total.toFixed(2)}`
       }
     ]
   };
+
   const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
     method: "POST",
     headers: {
@@ -27,6 +30,7 @@ Valor: R$${total.toFixed(2)}`
     },
     body: JSON.stringify(body)
   });
+
   if (!res.ok) {
     const text = await res.text();
     console.error("Erro ao enviar e-mail:", text);
@@ -47,9 +51,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { txid, email, nome, numeros, quantity_numbers, unit_price } = await req.json();
+    const { txid, numeros, quantity_numbers, unit_price } = await req.json();
 
-    if (!txid || !email || !nome || !numeros || !quantity_numbers || !unit_price) {
+    if (!txid || !numeros || !quantity_numbers || !unit_price) {
       return new Response(JSON.stringify({ error: "Parâmetros inválidos." }), { status: 400 });
     }
 
@@ -61,7 +65,7 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_KEY");
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Atualiza pagamento como "paid"
+    // 1️⃣ Atualiza pagamento
     const { data: payment, error: payError } = await supabase
       .from("payments")
       .update({ status: "paid" })
@@ -71,66 +75,57 @@ Deno.serve(async (req) => {
 
     if (payError || !payment) throw new Error(payError?.message || "Pagamento não encontrado");
 
-    // ====== GARANTE USUÁRIO ======
-    let userId: string;
-
-    const { data: existingUser, error: userSelectError } = await supabase
+    // 2️⃣ Cria (ou pega) usuário
+    let { data: user } = await supabase
       .from("users")
       .select("id")
-      .eq("email", email)
+      .eq("email", payment.email)
       .maybeSingle();
 
-    if (userSelectError) throw new Error(userSelectError.message);
-
-    if (existingUser) {
-      userId = existingUser.id;
-    } else {
-      // cria novo usuário anônimo
-      const { data: newUser, error: insertUserError } = await supabase
+    if (!user) {
+      const { data: newUser, error: userError } = await supabase
         .from("users")
-        .insert({ email, full_name: nome })
-        .select("id")
+        .insert({
+          email: payment.email,
+          full_name: payment.nome
+        })
+        .select()
         .single();
 
-      if (insertUserError) throw new Error(insertUserError.message);
-
-      userId = newUser.id;
+      if (userError) throw new Error(userError.message);
+      user = newUser;
     }
 
-    // Usa os números do payment se não vierem no body
-    const numerosAposta = numeros || payment.numeros;
-
-    // Cria aposta
+    // 3️⃣ Cria aposta
     const { data: bet, error: betError } = await supabase
       .from("bets")
-      .insert([
-        {
-          user_id: userId,
-          numeros: numerosAposta,
-          quantity_numbers,
-          qty_tickets: 1,
-          unit_price,
-          total_price,
-          status: "paid",
-          pix_txid: txid,
-          month_year
-        }
-      ])
+      .insert([{
+        user_id: user.id,
+        numeros,
+        quantity_numbers,
+        qty_tickets: 1,
+        unit_price,
+        total_price,
+        status: "paid",
+        pix_txid: txid,
+        month_year
+      }])
       .select()
       .single();
 
     if (betError) throw new Error(betError.message);
 
-    // Atualiza agregados mensais
+    // 4️⃣ Atualiza agregados
     const { error: aggError } = await supabase.rpc("increment_aggregate", {
       month: month_year,
       tickets: 1,
       amount: total_price
     });
+
     if (aggError) throw new Error(aggError.message);
 
-    // Envia e-mail
-    await sendEmail(email, nome, numerosAposta, total_price);
+    // 5️⃣ Envia email
+    await sendEmail(payment.email, payment.nome, numeros, total_price);
 
     return new Response(JSON.stringify({ success: true, bet }), {
       status: 200,

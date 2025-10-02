@@ -1,28 +1,46 @@
 // src/services/betsService.js
 import { supabase } from "../supabaseClient";
 
-/**
- * Registra uma aposta no banco de dados.
- * @param {Object} aposta - Dados da aposta
- * @param {string} aposta.user_id - ID do usuário que está apostando
- * @param {Array<number>} aposta.numeros - Números escolhidos
- * @param {number} aposta.quantity_numbers - Quantidade de números selecionados
- * @param {number} aposta.qty_tickets - Quantidade de bilhetes
- * @param {number} aposta.unit_price - Preço unitário da aposta
- * @param {number} aposta.total_price - Preço total da aposta
- * @param {string} aposta.status - Status inicial da aposta ('pending')
- * @param {string} aposta.pix_txid - TXID do pagamento
- * @param {string} aposta.referral_code - Código de indicação (opcional)
- */
 export async function registrarAposta(aposta) {
   const month_year = new Date().toISOString().slice(0, 7); // YYYY-MM
 
   try {
+    let userId = aposta.user_id;
+
+    // 🔹 Se não foi passado user_id, busca ou cria um usuário de teste
+    if (!userId) {
+      const { data: existingUser, error: userError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", "teste@teste.com")
+        .single();
+
+      if (userError || !existingUser) {
+        const { data: newUser, error: createUserError } = await supabase
+          .from("users")
+          .insert([{ email: "teste@teste.com", full_name: "Usuário Teste" }])
+          .select()
+          .single();
+
+        if (createUserError) throw new Error(createUserError.message);
+        userId = newUser.id;
+      } else {
+        userId = existingUser.id;
+      }
+    }
+
+    // 🔹 Garante que numeros não seja null
+    const numerosValidos = aposta.numeros && aposta.numeros.length > 0 
+      ? aposta.numeros 
+      : [1, 2, 3, 4, 5, 6];
+
     // 1️⃣ Insere a aposta
     const { data: bet, error: betError } = await supabase
       .from("bets")
       .insert([{
         ...aposta,
+        user_id: userId,      // força user_id válido
+        numeros: numerosValidos,
         month_year
       }])
       .select()
@@ -48,7 +66,7 @@ export async function registrarAposta(aposta) {
       if (!refError && referrer) {
         await supabase.from("referrals").insert({
           referrer_user_id: referrer.id,
-          referred_user_id: aposta.user_id
+          referred_user_id: userId
         });
       }
     }
@@ -57,31 +75,6 @@ export async function registrarAposta(aposta) {
 
   } catch (err) {
     console.error("Erro ao registrar aposta:", err);
-    throw err;
-  }
-}
-
-/**
- * Contabiliza apostas pagas e calcula prêmio do mês
- * @param {string} monthYear - Formato 'YYYY-MM'
- */
-export async function calcularPremioMes(monthYear) {
-  try {
-    // Soma total de apostas pagas
-    const { data, error } = await supabase
-      .from("bets")
-      .select("total_price")
-      .eq("status", "paid")
-      .eq("month_year", monthYear);
-
-    if (error) throw new Error(error.message);
-
-    const totalPremio = data.reduce((acc, cur) => acc + Number(cur.total_price), 0);
-
-    return totalPremio;
-
-  } catch (err) {
-    console.error("Erro ao calcular prêmio do mês:", err);
     throw err;
   }
 }

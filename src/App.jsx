@@ -1,12 +1,11 @@
 //src/app.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState,useRef } from "react";
 import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import QRCode from "react-qr-code";
 import IndicacoesView from "./IndicacoesView";
 import Dashboard from "./Dashboard";
 import PaymentForm from "./components/PaymentForm";
 import React from "react";
-
 
 // ================================
 // UTIL & MOCK DATA (mantido do seu código)
@@ -49,7 +48,11 @@ const LS_INDICACOES = "sf_indicacoes";
 
 function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function randomUUID() { return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => { const r = (Math.random() * 16) | 0; const v = c === "x" ? r : (r & 0x3) | 0x8; return v.toString(16); }); }
-function formatBRL(v) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function formatBRL(value) {
+  if (typeof value !== "number") return "R$ 0,00";
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 
 // ================================
 // COMPONENTES
@@ -166,7 +169,7 @@ function HomeView() {
         <div className="aposta-opcoes">
           <label>Quantidade de números</label>
           <select value={qtdNumeros} onChange={(e) => { setQtdNumeros(Number(e.target.value)); setSelecionados([]); }}>
-            <option value={7}>3 números — {formatBRL(precosPorQuantidade[1])}</option>
+            <option value={3}>3 números — {formatBRL(precosPorQuantidade[3])}</option>
             <option value={7}>7 números — {formatBRL(precosPorQuantidade[7])}</option>
             <option value={8}>8 números — {formatBRL(precosPorQuantidade[8])}</option>
             <option value={9}>9 números — {formatBRL(precosPorQuantidade[9])}</option>
@@ -194,15 +197,6 @@ function HomeView() {
 
         <button onClick={confirmarAposta} disabled={!podeConfirmar} className="botao-confirmar">✅ Confirmar Aposta</button>
       </section>
-
-      {mostrarPaymentForm && (
-        <section className="payment-inline">
-          <PaymentForm totalCompra={totalCompra} onSuccess={(paymentRecord) => {
-            setPaymentCreated(paymentRecord);
-            setMostrarIndicacoesInline(true);
-          }} />
-        </section>
-      )}
 
       {mostrarIndicacoesInline && (
         <section className="indicacoes-inline">
@@ -281,7 +275,7 @@ export default function App() {
         <Route path="/" element={<HomeView />} />
         <Route path="/indicacoes" element={<IndicacoesViewWrapper />} />
         <Route path="/pagamento" element={<PaymentForm />} />
-        <Route path="/dashboard" element={<PaymentForm />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
     

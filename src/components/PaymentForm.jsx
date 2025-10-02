@@ -2,12 +2,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPayment } from "../services/payments";
 import { registrarAposta } from "../services/betsService";
-// import { enviarEmailApostador } from "../services/emailService";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../supabaseClient";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onSuccess = () => {} }) {
   const [form, setForm] = useState({
-    nome: "",
+    full_name: "",
     cpf: "",
     email: "",
     celular: "",
@@ -19,7 +21,6 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
 
   const formRef = useRef(null);
 
-  // 🔽 Quando abrir o formulário, rola automático até ele
   useEffect(() => {
     if (formRef.current) {
       formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -34,20 +35,51 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
     e.preventDefault();
     setError(null);
 
-    if (!form.nome || !form.cpf || !form.email || !form.celular || !form.valor) {
+    if (!form.full_name || !form.cpf || !form.email || !form.celular || !form.valor) {
       setError("Preencha todos os campos obrigatórios.");
       return;
     }
 
     setLoading(true);
     try {
-      // 1️⃣ Cria pagamento no Supabase DB
+      // 1️⃣ Criar ou buscar usuário na tabela users
+      let { data: existingUser, error: findUserError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", form.email)
+        .maybeSingle();
+
+      if (findUserError) throw new Error("Erro ao buscar usuário: " + findUserError.message);
+
+      let userId;
+      if (!existingUser) {
+        // Se não existe, cria
+        const { data: newUser, error: insertUserError } = await supabase
+          .from("users")
+          .insert([
+            {
+              full_name: form.full_name,
+              cpf: form.cpf,
+              email: form.email,
+              celular: form.celular,
+            },
+          ])
+          .select()
+          .single();
+
+        if (insertUserError) throw new Error("Erro ao criar usuário: " + insertUserError.message);
+
+        userId = newUser.id;
+      } else {
+        userId = existingUser.id;
+      }
+
+      // 2️⃣ Cria pagamento no Supabase DB
       const { data: created, error: dbError } = await createPayment({
-        nome: form.nome,
+        nome: form.full_name,
         cpf: form.cpf,
         email: form.email,
         celular: form.celular,
-        endereco: form.endereco,
         valor: Number(form.valor),
       });
 
@@ -55,7 +87,7 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
 
       const payment = created[0];
 
-      // 2️⃣ Cria preferência no Mercado Pago via Edge Function
+      // 3️⃣ Cria preferência no Mercado Pago via Edge Function
       const res = await fetch(`${SUPABASE_URL}/functions/v1/rapid-worker`, {
         method: "POST",
         headers: {
@@ -67,7 +99,7 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
           totalCompra: Number(form.valor),
           txid: payment.txid,
           email: form.email,
-          nome: form.nome,
+          full_name: form.full_name,
           cpf: form.cpf,
         }),
       });
@@ -80,10 +112,15 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
       const data = await res.json();
       if (!data.init_point) throw new Error("Não foi possível obter o link de pagamento.");
 
-      // 3️⃣ Registro da aposta com os números escolhidos
+      // 4️⃣ Registro da aposta com os números escolhidos
+      const numerosParaRegistrar = Array.isArray(selectedNumbers)
+        ? selectedNumbers.map((n) => (typeof n === "string" ? Number(n) : n))
+        : [];
+
       await registrarAposta({
-        user_id: payment.id, // ou ID do usuário real se houver
-        quantity_numbers: selectedNumbers.length,
+        user_id: userId, // 🔑 agora usa o id do usuário da tabela users
+        numeros: numerosParaRegistrar,
+        quantity_numbers: numerosParaRegistrar.length || selectedNumbers.length || 0,
         qty_tickets: 1,
         unit_price: Number(form.valor),
         total_price: Number(form.valor),
@@ -95,7 +132,7 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
       // 4️⃣ Envio de e-mail de confirmação ao apostador (se quiser ativar)
       /*
       await enviarEmailApostador({
-        nome: form.nome,
+        full_name: form.full_name,
         email: form.email,
         txid: payment.txid,
         valor: Number(form.valor),
@@ -109,7 +146,7 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
       onSuccess(payment);
     } catch (err) {
       console.error("Erro ao processar pagamento:", err);
-      setError("Erro ao processar pagamento. Veja o console.");
+      setError(err.message || "Erro ao processar pagamento. Veja o console.");
     } finally {
       setLoading(false);
     }
@@ -119,7 +156,6 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
     <div className="payment-form" ref={formRef}>
       <h3>Pagamento</h3>
 
-      {/* 🔽 Mostrar números escolhidos antes do formulário */}
       {selectedNumbers.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <strong>Números escolhidos:</strong>
@@ -142,11 +178,10 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
       )}
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 8, maxWidth: 520 }}>
-        <input name="nome" value={form.nome} onChange={handleChange} placeholder="Nome completo" required />
+        <input name="full_name" value={form.full_name} onChange={handleChange} placeholder="Nome completo" required />
         <input name="cpf" value={form.cpf} onChange={handleChange} placeholder="CPF" required />
         <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="E-mail" required />
         <input name="celular" value={form.celular} onChange={handleChange} placeholder="Celular" required />
-        <input name="endereco" value={form.endereco} onChange={handleChange} placeholder="Endereço (opcional)" />
         <input name="valor" type="number" step="0.01" value={form.valor} onChange={handleChange} placeholder="Valor (R$)" required />
 
         <div style={{ display: "flex", gap: 8 }}>

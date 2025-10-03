@@ -6,6 +6,8 @@ import IndicacoesView from "./IndicacoesView";
 import Dashboard from "./Dashboard";
 import PaymentForm from "./components/PaymentForm";
 import React from "react";
+import logo from "./logo.png";
+import certificado from "./certificado.png";
 
 // ================================
 // UTIL & MOCK DATA (mantido do seu código)
@@ -86,13 +88,61 @@ function HomeView() {
 
   const depoimentos = useMemo(() => depoimentosSeed.map((d, i) => ({ ...d, foto: rostos[i % rostos.length] })), []);
 
-  // ticker de mensagens
+  const VISIBLE_WINNERS = 3;
+  const COLUMN_COUNT = 4;
+  const INITIAL_QUEUE_LENGTH = 7;
+
+  function makeWinner() {
+    return {
+      id: randomUUID(),
+      nome: getRandomItem(nomesBR),
+      valor: (Math.floor(Math.random() * 900) + 100) * 1000, // ex: 100.000..999.000
+      foto: getRandomItem(rostos),
+      isNew: false,
+    };
+  }
+
+  // estado com colunas de vencedores (cada coluna é um array de N itens)
+  const [winnersCols, setWinnersCols] = useState(() =>
+    Array.from({ length: COLUMN_COUNT }).map(() =>
+      Array.from({ length: INITIAL_QUEUE_LENGTH }).map(() => makeWinner())
+    )
+  );
+
+  // lógica para "puxar" um novo vencedor em cada coluna em timers diferentes
   useEffect(() => {
-    const intervalo = setInterval(() => {
-      setMensagem(`${getRandomItem(nomesBR)} acabou de ganhar R$ 500 mil. Mais um milionário(a)`);
-      setMensagemFoto(getRandomItem(rostos));
-    }, 3000);
-    return () => clearInterval(intervalo);
+    const timers = [];
+
+    for (let colIdx = 0; colIdx < COLUMN_COUNT; colIdx++) {
+      // cada coluna atualiza em um ritmo ligeiramente diferente (para parecer natural)
+      const base = 2800; // tempo base
+      const jitter = Math.floor(Math.random() * 800); // pequena aleatoriedade
+      const intervalMs = base + colIdx * 700 + jitter;
+
+      const t = setInterval(() => {
+        setWinnersCols((prev) =>
+          prev.map((col, idx) => {
+            if (idx !== colIdx) return col;
+            const newTop = { ...makeWinner(), isNew: true };
+            const next = [newTop, ...col.slice(0, col.length - 1)];
+            return next;
+          })
+        );
+
+        // limpa a flag isNew após a animação (caso precise remover classe)
+        setTimeout(() => {
+          setWinnersCols((prev) =>
+            prev.map((col, idx) =>
+              idx !== colIdx ? col : col.map((it) => ({ ...it, isNew: false }))
+            )
+          );
+        }, 900);
+      }, intervalMs);
+
+      timers.push(t);
+    }
+
+    return () => timers.forEach(clearInterval);
   }, []);
 
   useEffect(() => { localStorage.setItem(LS_TOTAL_APOSTAS, String(totalApostas)); }, [totalApostas]);
@@ -147,21 +197,54 @@ function HomeView() {
       {/* HERO */}
       <section className="hero">
         <h2 className="hero-title">Escolha seus números e participe</h2>
-        <p className="hero-subtitle">Prêmios de até <strong>R$ 500.000,00</strong>. Com transações reais, na hora sem burocracia.</p>
-        <p className="text-xs disclaimer">
-
+        <p className="hero-subtitle">
+          Prêmios de até <strong className="highlight-light">R$ 500.000</strong> — ENTRE AGORA e transforme sua vida. Vagas por sorteio são limitadas!
         </p>
+        <p className="text-xs disclaimer"></p>
       </section>
 
-      {/* MENSAGENS */}
-      <section className="mensagem-container shadow">
-        <p>{mensagem || "Aguardando vencedores..."}</p>
+      {/* MENSAGENS DE GANHADORES */}
+      <section className="mensagem-container">
+        <div className="mensagem-head">
+          <h2 className="mensagem-titulo">
+            <span className="spark">🔥</span>{" "}
+            <span className="highlight">Últimos Ganhadores</span> — veja quem ganhou
+            agora!
+          </h2>
+          <p className="mensagem-sub">
+            A sorte pode ser sua a qualquer momento — <span className="cta">jogue já</span>!
+          </p>
+        </div>
+
+        <div className="grid-ganhadores">
+          {winnersCols.map((col, colIdx) => (
+            <div key={colIdx} className="coluna-ganhadores" aria-hidden={false}>
+              {col.slice(0, VISIBLE_WINNERS).map((win, idx) => (
+                <div
+                  key={win.id}
+                  className={`ganhador-item ${win.isNew ? "is-new" : ""}`}
+                  aria-live="polite"
+                >
+                  <img src={win.foto} alt={`foto ${win.nome}`} className="ganhador-foto" />
+                  <div className="ganhador-info">
+                    <div className="ganhador-nome">{win.nome}</div>
+                    <div className="ganhador-premio">
+                      <span className="badge">JÁ GANHOU!</span>
+                      <span className="valor">{formatBRL(win.valor)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </section>
+
 
       {/* TOTAIS */}
-      <section className="totais-container">
-        <div><strong>Total de apostas:</strong> {totalApostas}0000</div>
-        <div><strong>Prêmio do mês:</strong> {formatBRL(premioPrevisto * 1000)}</div>
+      <section className="totais-container" style={{ margin: "2.5rem 0" }}>
+        <div>Total de apostas: <strong>{Number(totalApostas).toLocaleString()}0000</strong></div>
+        <div className="premio-mes">Prêmio do mês: <strong class="highlight">{formatBRL(premioPrevisto * 1000)}</strong></div>
       </section>
 
       {/* APOSTAS */}
@@ -234,6 +317,65 @@ function HomeView() {
           </div>
         ))}
       </section>
+
+      <footer className="footer">
+        <div className="footer-top">
+          <div className="footer-logo">
+            <img src={logo} alt="Mega da Sorte" />  
+            <p className="slogan">Mega da Sorte — A sorte pode estar a um clique!</p>
+          </div>
+
+          <div className="footer-links">
+            <h4>Institucional</h4>
+            <ul>
+              <li><a href="/sobre">Sobre Nós</a></li>
+              <li><a href="/como-jogar">Como Jogar</a></li>
+              <li><a href="/politica-privacidade">Política de Privacidade</a></li>
+              <li><a href="/termos">Termos & Condições</a></li>
+              <li><a href="/responsabilidade">Jogo Responsável</a></li>
+            </ul>
+          </div>
+
+          <div className="footer-contato">
+            <h4>Atendimento</h4>
+            <ul>
+              <li>Email: suporte@megadasorte.com</li>
+              <li>WhatsApp: (11) 99999-9999</li>
+              <li>Horário: 24h, todos os dias</li>
+            </ul>
+          </div>
+
+          <div className="footer-social">
+            <h4>Siga-nos</h4>
+            <div className="social-icons">
+              <a href="#"><i className="fab fa-instagram"></i></a>
+              <a href="#"><i className="fab fa-tiktok"></i></a>
+              <a href="#"><i className="fab fa-facebook"></i></a>
+              <a href="#"><i className="fab fa-x-twitter"></i></a>
+            </div>
+          </div>
+        </div>
+
+        <div className="footer-middle">
+          <div className="footer-certificacoes">
+            <img src={certificado} alt="Certificação" style={{width:'6rem'}}/>  
+            <p>Autorizado e regulado pela legislação brasileira.</p>
+          </div>
+          <div className="responsible-play">
+            <span>🔞 18+ | Jogue com responsabilidade</span>
+            <p>O jogo é para maiores de idade. Se sentir que perdeu o controle, procure ajuda em nossa seção de <a href="/responsabilidade">Jogo Responsável</a>.</p>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          <p>
+            © {new Date().getFullYear()} Mega da Sorte. Todos os direitos reservados.  
+            Operado por Mega Sorte Brasil LTDA. CNPJ nº 55.459.453/0001-72.  
+            Endereço: Av. Paulista, 1000 — São Paulo/SP.  
+          </p>
+        </div>
+      </footer>
+
     </main>
 
 
@@ -263,13 +405,23 @@ export default function App() {
   return (
     <Router>
       <header className="header">
-        <h1 className="logo">Mega da sorte POVÃO</h1>
+        <div className="header-left">
+          <h1 className="logo">🎲 Mega da Sorte</h1>
+          <p className="slogan">Sua sorte começa aqui — rápido, seguro e 100% sigiloso</p>
+        </div>
+
         <nav className="nav">
-          <Link to="/">Home</Link>
-          <Link to="/indicacoes">Indicações</Link>
-          <Link to="/pagamento">Depósito</Link>
+          <Link to="/">🏠 Jogar na MEGA da SORTE</Link>
+          <Link to="/indicacoes">👥 Indicações</Link>
+          <Link to="/pagamento">💳 Depósito</Link>
         </nav>
       </header>
+
+      <div className="header-info">
+        <span>🔒 Seus dados são totalmente sigilosos</span>
+        <span>🔞 Apenas maiores de 18 anos podem jogar</span>
+      </div>
+
       <Routes>
         <Route path="/" element={<HomeView />} />
         <Route path="/indicacoes" element={<IndicacoesViewWrapper />} />

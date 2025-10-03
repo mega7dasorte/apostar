@@ -336,3 +336,14 @@ main.container {
 .indicacoes-view > div span:last-child {
   color: #0f172a;
 }
+.oferta-valor {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(90deg, #ff9800, #ff5722) !important;
+  border: none;
+  border-radius: 12px;
+  text-align: center;
+  padding: 10px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}

@@ -30,9 +30,7 @@ export async function registrarAposta(aposta) {
     }
 
     // 🔹 Garante que numeros não seja null
-    const numerosValidos = aposta.numeros && aposta.numeros.length > 0 
-      ? aposta.numeros 
-      : [1, 2, 3, 4, 5, 6];
+    const numerosValidos = aposta.numeros ?? []; 
 
     // 1️⃣ Insere a aposta
     const { data: bet, error: betError } = await supabase

@@ -6,6 +6,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../supabaseClient";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+function formatBRL(value) {
+  if (typeof value !== "number") return "R$ 0,00";
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onSuccess = () => {} }) {
   const [form, setForm] = useState({
@@ -26,6 +30,13 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
       formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, []);
+
+  // 🔥 sempre que totalCompra mudar no App.jsx, atualiza o campo "valor"
+  useEffect(() => {
+    if (totalCompra) {
+      setForm((prev) => ({ ...prev, valor: totalCompra.toFixed(2) }));
+    }
+  }, [totalCompra]);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -182,7 +193,15 @@ export default function PaymentForm({ totalCompra = 0, selectedNumbers = [], onS
         <input name="cpf" value={form.cpf} onChange={handleChange} placeholder="CPF" required />
         <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="E-mail" required />
         <input name="celular" value={form.celular} onChange={handleChange} placeholder="Celular" required />
-        <input name="valor" type="number" step="0.01" value={form.valor} onChange={handleChange} placeholder="Valor (R$)" required />
+        <div className="form-group" style={{ textAlign: "center" }}>
+          <input
+            name="valor"
+            type="text"
+            value={form.valor ? formatBRL(Number(form.valor)) : "R$ 0,00"}
+            readOnly
+            className="oferta-valor"
+          />
+        </div>  
 
         <div style={{ display: "flex", gap: 8 }}>
           <button type="submit" disabled={loading}>

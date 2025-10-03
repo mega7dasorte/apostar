@@ -168,7 +168,14 @@ function HomeView() {
       <section className="aposta-container">
         <div className="aposta-opcoes">
           <label>Quantidade de números</label>
-          <select value={qtdNumeros} onChange={(e) => { setQtdNumeros(Number(e.target.value)); setSelecionados([]); }}>
+          <select value={qtdNumeros} 
+              onChange={(e) => {
+                setQtdNumeros(Number(e.target.value));
+                setSelecionados([]);        // limpa a grid
+                setNumerosConfirmados([]);  // limpa números confirmados
+                setMostrarPaymentForm(false); // fecha o form até confirmar de novo
+              }}
+          >
             <option value={3}>3 números — {formatBRL(precosPorQuantidade[3])}</option>
             <option value={7}>7 números — {formatBRL(precosPorQuantidade[7])}</option>
             <option value={8}>8 números — {formatBRL(precosPorQuantidade[8])}</option>
@@ -205,19 +212,11 @@ function HomeView() {
         </section>
       )}
 
-      {/* exibir números confirmados */}
-      {numerosConfirmados.length > 0 && (
-        <div className="selected-box">
-          <h3>🎯 Seus números confirmados:</h3>
-          <p>{numerosConfirmados.join(", ")}</p>
-        </div>
-      )}
-
       {mostrarPaymentForm && (
         <section ref={formRef} className="payment-inline">
           <PaymentForm
             totalCompra={totalCompra}
-            numerosSelecionados={numerosConfirmados}   // 👈 passando para o backend
+            selectedNumbers={numerosConfirmados}   // 👈 passando para o backend
             onSuccess={(paymentRecord) => {
               setPaymentCreated(paymentRecord);
               setMostrarIndicacoesInline(true);

@@ -600,3 +600,144 @@ main.container {
 .premio-mes {
   margin: 1.7rem 0;
 }
+
+/* ===================== */
+/*  AJUSTES RESPONSIVOS  */
+/* ===================== */
+
+/* ===== HEADER ===== */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 12px 16px;
+  }
+
+  .header-left {
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .logo {
+    white-space: nowrap; /* impede quebra no nome */
+    font-size: 1.4rem;
+  }
+
+  .slogan {
+    font-size: 0.8rem;
+  }
+
+  .nav {
+    flex-wrap: wrap;   /* permite quebrar no mobile */
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .nav a {
+    font-size: 0.9rem;
+    margin: 4px 0;
+  }
+}
+
+/* ===== GANHADORES ===== */
+@media (max-width: 768px) {
+  .mensagem-container {
+    height: auto;          /* deixa crescer conforme o conteúdo */
+    padding: 10px;
+    max-height: unset;     /* remove limite que cortava */
+  }
+
+  .grid-ganhadores {
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    overflow: visible;  /* evita corte das colunas */
+  }
+
+  .coluna-ganhadores {
+    flex: unset; /* deixa o grid cuidar da largura */
+  }
+
+  .ganhador-item {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+
+  .ganhador-foto {
+    width: 40px;
+    height: 40px;
+    filter: blur(1.2px); /* mantém o leve embaçado */
+  }
+
+  .ganhador-nome {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* evita quebrar nomes longos */
+    max-width: 100px;
+  }
+
+  .ganhador-premio {
+    font-size: 0.75rem;
+  }
+
+  .badge {
+    clear: left; 
+    display: block;
+  }
+}
+
+/* Ajuste no layout dos ganhadores para mobile */
+@media (max-width: 768px) {
+  .ganhador-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto; /* foto | nome | valor */
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+  }
+
+  .ganhador-foto {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .ganhador-nome {
+    font-size: 0.85rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ganhador-premio {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #00ff66;
+    margin-left: auto; /* gruda à direita */
+    white-space: nowrap;
+  }
+
+  /* Selo "Já ganhou" embaixo do nome no mobile */
+  .ganhador-selo {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: orange;
+    color: white;
+    font-weight: bold;
+  }
+
+  .badge {
+    clear: left; 
+    display: block;
+  }
+}

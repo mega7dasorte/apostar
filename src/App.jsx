@@ -229,8 +229,8 @@ function HomeView() {
                   <div className="ganhador-info">
                     <div className="ganhador-nome">{win.nome}</div>
                     <div className="ganhador-premio">
-                      <span className="badge">JÁ GANHOU!</span>
-                      <span className="valor">{formatBRL(win.valor)}</span>
+                      <p className="badge">JÁ GANHOU!</p>
+                      <p className="valor">{formatBRL(win.valor)}</p>
                     </div>
                   </div>
                 </div>

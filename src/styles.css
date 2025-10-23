@@ -40,7 +40,7 @@ main.container {
   opacity: 0.8;
 }
 
-/* ====== HERO ====== */
+/* ====== HERO ====== ANTIGO
 .hero {
   text-align: center;
   margin: 1.3rem 0;
@@ -61,7 +61,60 @@ main.container {
 .disclaimer {
   font-size: 0.75rem;
   color: #94a3b8;
+}*/
+/* ====== HERO ======*/
+.hero {
+  position: relative;
+  width: 100%;
+  height: 360px;
+  border-radius: 1.2rem;
+  overflow: hidden;
+  background-color: #007a3e; /* fallback verde */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
 }
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: brightness(0.85);
+}
+
+.hero-overlay {
+  position: relative;
+  z-index: 2;
+  padding: 1.5rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.45) 10%, rgba(0,0,0,0.1) 60%, transparent);
+  width: 100%;
+}
+
+.hero-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 0.6rem;
+}
+
+.hero-title span {
+  color: #ffdd3c;
+}
+
+.hero-sub {
+  font-size: 1.05rem;
+  color: #f5f5f5;
+  font-weight: 400;
+}
+
 
 /* ====== MENSAGEM ====== */
 .mensagem-container {

@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState,useRef } from "react";
 import { HashRouter as Router, Routes, Route, Link } from "react-router-dom";
 import QRCode from "react-qr-code";
 import IndicacoesView from "./IndicacoesView";
+import InfoPages from "./InfoPages";
 import Dashboard from "./Dashboard";
 import PaymentForm from "./components/PaymentForm";
 import React from "react";
 import logo from "./logo.png";
+import banner from "./1761176116096.png";
 import certificado from "./certificado.png";
 
 // ================================
@@ -196,10 +198,61 @@ function HomeView() {
     <main className="container">
       {/* HERO */}
       <section className="hero">
-        <h2 className="hero-title">Escolha seus números e participe</h2>
-        <p className="hero-subtitle">
-          Prêmios de até <strong className="highlight-light">R$ 500.000</strong> — ENTRE AGORA e transforme sua vida. Vagas por sorteio são limitadas!
-        </p>
+        <div className="hero-bg">  
+          <img src={banner} alt="Banner do prêmio" className="hero-img" />
+        </div>
+        {/*<h2 className="hero-title">Escolha seus números e participe</h2>
+
+         PRÊMIO DO MÊS 
+        <div className="premio-mes">
+          {(() => {
+            const hoje = new Date();
+            const dia = hoje.getDate();
+            let valorPremio;
+            let mensagem;
+
+            if (dia <= 27) {
+              // 🧲 Valor fixo e atrativo até o dia 27
+              valorPremio = 500000;
+              mensagem = `Concorra ao prêmio de ${formatBRL(valorPremio)} no fim do mês!`;
+            } else {
+              // 📅 Nos últimos dias do mês: usa o cálculo real das apostas pagas
+              valorPremio = premioPrevisto; // futuramente substituir pelo valor vindo do backend
+              mensagem = `O prêmio deste mês é de ${formatBRL(valorPremio)} DE REAIS!`;
+            }
+
+            return (
+              <p>
+                <span className="label">{mensagem}</span> — ENTRE AGORA e transforme sua vida. Vagas por sorteio são limitadas!
+              </p>
+            );
+          })()}
+        </div>*/}
+
+        <div className="hero-overlay">
+          {(() => {
+            const hoje = new Date();
+            const dia = hoje.getDate();
+            let valorPremio;
+            let mensagem;
+
+            if (dia <= 27) {
+              // 🧲 Valor fixo e atrativo até o dia 27
+              valorPremio = 500000;
+              mensagem = `Concorra ao prêmio de ${formatBRL(valorPremio)} no fim do mês!`;
+            } else {
+              // 📅 Nos últimos dias do mês: usa o cálculo real das apostas pagas
+              valorPremio = premioPrevisto; // futuramente substituir pelo valor vindo do backend
+              mensagem = `O prêmio deste mês é de ${formatBRL(valorPremio)} DE REAIS!`;
+            }
+
+            return (
+
+              <h1 className="hero-title">{mensagem} </h1>
+            );
+          })()}
+          <p className="hero-sub">Você recebe o valor do prêmio direto na sua conta.</p>
+        </div>
         <p className="text-xs disclaimer"></p>
       </section>
 
@@ -328,11 +381,11 @@ function HomeView() {
           <div className="footer-links">
             <h4>Institucional</h4>
             <ul>
-              <li><a href="/sobre">Sobre Nós</a></li>
-              <li><a href="/como-jogar">Como Jogar</a></li>
-              <li><a href="/politica-privacidade">Política de Privacidade</a></li>
-              <li><a href="/termos">Termos & Condições</a></li>
-              <li><a href="/responsabilidade">Jogo Responsável</a></li>
+              <li><Link to="/sobre">Sobre Nós</Link></li>
+              <li><Link to="/como-jogar">Como Jogar</Link></li>
+              <li><Link to="/politica-privacidade">Política de Privacidade</Link></li>
+              <li><Link to="/termos">Termos & Condições</Link></li>
+              <li><Link to="/responsabilidade">Jogo Responsável</Link></li>
             </ul>
           </div>
 
@@ -340,12 +393,11 @@ function HomeView() {
             <h4>Atendimento</h4>
             <ul>
               <li>Email: suporte@megadasorte.com</li>
-              <li>WhatsApp: (11) 99999-9999</li>
               <li>Horário: 24h, todos os dias</li>
             </ul>
           </div>
 
-          <div className="footer-social">
+          {/*<div className="footer-social">
             <h4>Siga-nos</h4>
             <div className="social-icons">
               <a href="#"><i className="fab fa-instagram"></i></a>
@@ -353,7 +405,7 @@ function HomeView() {
               <a href="#"><i className="fab fa-facebook"></i></a>
               <a href="#"><i className="fab fa-x-twitter"></i></a>
             </div>
-          </div>
+          </div>*/}
         </div>
 
         <div className="footer-middle">
@@ -427,6 +479,11 @@ export default function App() {
         <Route path="/indicacoes" element={<IndicacoesViewWrapper />} />
         <Route path="/pagamento" element={<PaymentForm />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/sobre" element={<InfoPages />} />
+        <Route path="/como-jogar" element={<InfoPages />} />
+        <Route path="/politica-privacidade" element={<InfoPages />} />
+        <Route path="/termos" element={<InfoPages />} />
+        <Route path="/responsabilidade" element={<InfoPages />} />
       </Routes>
     </Router>
     
